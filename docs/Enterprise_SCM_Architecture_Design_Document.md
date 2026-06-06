@@ -264,7 +264,7 @@ AI/ML roadmap.
 
 ## 4. Detailed ER Diagram (100+ Tables)
 
-The data model is organized into 16 domains comprising **~124 tables**. Each domain is
+The data model is organized into 16 domains comprising **~127 tables**. Each domain is
 listed below with its tables and a one-line purpose. Section 5 then provides full
 column-level schema for the ~50 "backbone" tables (marked **★**) that carry the core
 transactional and relational weight of the system; the remaining tables follow the same
@@ -284,19 +284,22 @@ naming, key, and audit-column conventions described in Section 6.
 | `fiscal_periods` ★ | Open/closed accounting periods (months/quarters) |
 | `number_sequences` | Configurable document numbering (PO-2026-00001, etc.) |
 
-**B. Security & RBAC (10)**
+**B. Security & RBAC (13)**
 | Table | Purpose |
 |---|---|
 | `users` ★ | Platform user accounts |
 | `roles` ★ | Named roles (e.g., Warehouse Operator, Controller) |
 | `permissions` ★ | Atomic permission grants (module.action.scope) |
-| `role_permissions` ★ | Role ↔ permission assignment |
+| `role_permissions` ★ | Role ↔ permission assignment, with optional ABAC `condition_expr` (§12.5) |
 | `user_roles` ★ | User ↔ role assignment (scoped by company/branch) |
 | `user_sessions` | Active session/JWT refresh-token tracking |
 | `password_reset_tokens` | One-time tokens for credential recovery |
 | `audit_logs` ★ | Immutable record of privileged actions and data changes |
 | `login_history` | Authentication attempt history (success/failure, IP, device) |
 | `api_keys` | Machine-to-machine credentials for integrations |
+| `sod_conflict_rules` ★ | Defines forbidden permission/role combinations — the Segregation-of-Duties matrix (§12.6) |
+| `sod_violations` ★ | Detected SoD conflicts with remediation/waiver workflow status (§12.6) |
+| `role_delegations` ★ | Time-boxed delegation of a role from one user to another (§12.7) |
 
 **C. Master Data (14)**
 | Table | Purpose |
@@ -456,14 +459,14 @@ naming, key, and audit-column conventions described in Section 6.
 | `notifications` | In-app/email/SMS notification records |
 | `notification_templates` | Reusable message templates per event type |
 
-**Domain table-count summary:** 8 + 10 + 14 + 7 + 7 + 10 + 12 + 10 + 11 + 6 + 6 + 6 + 6 + 6 + 5
-= **124 tables**, comfortably within the ~170-table footprint estimate once
+**Domain table-count summary:** 8 + 13 + 14 + 7 + 7 + 10 + 12 + 10 + 11 + 6 + 6 + 6 + 6 + 6 + 5
+= **127 tables**, comfortably within the ~170-table footprint estimate once
 tenant-specific extension tables, integration staging tables, and AI feature-store
 tables (Section 15) are added in later phases.
 
 ### 4.2 ER Relationship Diagrams (by Trade Flow)
 
-Showing all 124 tables in a single diagram is illegible; the relationships are instead
+Showing all 127 tables in a single diagram is illegible; the relationships are instead
 grouped into four focused views that mirror how data actually flows through the system.
 
 #### 4.2.1 Procure-to-Pay Flow
@@ -657,6 +660,8 @@ TABLE role_permissions                                              [Security]
   role_id             UUID          → roles.id, NOT NULL
   permission_id       UUID          → permissions.id, NOT NULL
   scope               ENUM          ('TENANT','COMPANY','BRANCH','WAREHOUSE','OWN')
+  condition_expr      JSONB         -- ABAC overlay: {"max_amount": 50000, "item_categories": [...],
+                                    --  "time_window": {...}, "exclude_if_requested_by_self": true}  (§12.5)
   UNIQUE (role_id, permission_id, scope)
 
 TABLE user_roles                                                    [Security]
@@ -680,7 +685,43 @@ TABLE audit_logs                                          [Security · APPEND-ON
   after_state         JSONB
   ip_address          INET
   occurred_at         TIMESTAMPTZ   NOT NULL, default now()
-  -- INSERT-only; no update/delete grants at the DB-role level (see §12.5)
+  -- INSERT-only; no update/delete grants at the DB-role level (see §12.11)
+
+TABLE sod_conflict_rules                                            [Security · SoD]
+  id                  UUID          🔑 PK
+  tenant_id           UUID          → tenants.id, NOT NULL
+  name                VARCHAR(150)  NOT NULL              -- "Maker-checker: AP invoice vs payment"
+  permission_a_code   VARCHAR(150)  → permissions.code, NOT NULL
+  permission_b_code   VARCHAR(150)  → permissions.code, NOT NULL
+  conflict_type       ENUM          ('HARD_BLOCK','SOFT_WARN_REQUIRES_WAIVER')
+  rationale           TEXT          NOT NULL              -- shown to admins/auditors at assignment time
+  UNIQUE (tenant_id, permission_a_code, permission_b_code)
+
+TABLE sod_violations                                                [Security · SoD]
+  id                  UUID          🔑 PK
+  tenant_id           UUID          → tenants.id, NOT NULL
+  user_id             UUID          → users.id, NOT NULL
+  conflict_rule_id    UUID          → sod_conflict_rules.id, NOT NULL
+  detected_at         TIMESTAMPTZ   NOT NULL, default now()
+  detection_source    ENUM          ('ASSIGNMENT_TIME','RUNTIME_SCAN','PERIODIC_AUDIT')
+  status              ENUM          ('OPEN','ACCEPTED_RISK','REMEDIATED','FALSE_POSITIVE')
+  resolution_notes    TEXT
+  resolved_by         UUID          → users.id
+  resolved_at         TIMESTAMPTZ
+
+TABLE role_delegations                                              [Security · Delegation]
+  id                  UUID          🔑 PK
+  delegator_user_id   UUID          → users.id, NOT NULL   -- person temporarily handing off access
+  delegate_user_id    UUID          → users.id, NOT NULL   -- person temporarily receiving it
+  role_id             UUID          → roles.id, NOT NULL
+  scope_company_id    UUID          → companies.id
+  scope_warehouse_id  UUID          → warehouses.id
+  starts_at           TIMESTAMPTZ   NOT NULL
+  ends_at             TIMESTAMPTZ   NOT NULL
+  reason              VARCHAR(255)  -- e.g. "Annual leave coverage 2026-06-15..2026-06-29"
+  status              ENUM          ('SCHEDULED','ACTIVE','EXPIRED','REVOKED')
+  approved_by         UUID          → users.id            -- required for sensitive roles, see §12.7
+  CHECK (ends_at > starts_at)
 ```
 
 ### 5.4 Master Data
@@ -1311,6 +1352,8 @@ TABLE approval_requests                                             [Workflow]
 |---|---|
 | `companies` | `tenant_id → tenants`, `base_currency_id → currencies` |
 | `users` / `roles` / `user_roles` | `tenant_id → tenants`; `user_roles`: `user_id → users`, `role_id → roles`, `company_id/branch_id/warehouse_id` (scope) |
+| `sod_conflict_rules` / `sod_violations` | `tenant_id → tenants`; rules: `permission_a_code/permission_b_code → permissions.code`; violations: `user_id → users`, `conflict_rule_id → sod_conflict_rules`, `resolved_by → users` |
+| `role_delegations` | `delegator_user_id → users`, `delegate_user_id → users`, `role_id → roles`, `scope_company_id → companies`, `scope_warehouse_id → warehouses`, `approved_by → users` |
 | `items` | `company_id → companies`, `category_id → item_categories`, `base_uom_id → units_of_measure`, `hsn_sac_code → hsn_sac_codes` |
 | `suppliers` / `customers` | `company_id → companies`, `default_currency_id → currencies`, `payment_term_id → payment_terms` |
 | `purchase_orders` | `company_id → companies`, `supplier_id → suppliers`, `warehouse_id → warehouses`, `currency_id → currencies` |
@@ -1859,7 +1902,85 @@ such tenants — no schema branching required, only configuration.
 
 ## 12. RBAC Security Model
 
-### 12.1 Model Shape: Roles, Permissions, and Scoped Assignment
+### 12.1 Architecture Decision: Why a Hybrid RBAC + ABAC + SoD Model
+
+An ERP/SCM platform's authorization model is not a generic "who can click this button"
+concern — it is the **primary structural control against financial fraud and inventory
+shrinkage**. The single most common failure mode in mid-market ERP deployments is not a
+broken permission check; it is a *correctly enforced* permission model that nonetheless
+lets one person create a vendor, raise a purchase order, approve it, receive the goods,
+approve the invoice, and release the payment — end to end, alone. Any RBAC design for
+Aivora has to be judged primarily on whether it can prevent, detect, and prove the
+absence of exactly that scenario, not merely on whether it can hide a menu item.
+
+Three well-known authorization paradigms were evaluated against this bar:
+
+| Dimension | Pure RBAC | Pure ABAC | ReBAC (Zanzibar-style graph) | **Hybrid (chosen)** |
+|---|---|---|---|---|
+| "Who can approve POs over ₹50,000?" — answerable by an auditor in one query | ✅ enumerable role → permission join | ❌ requires simulating policy code against every attribute combination | ⚠️ requires a graph traversal across relation tuples | ✅ enumerable role/permission join, with the *condition* visible inline as data (`condition_expr`) |
+| Expresses dynamic, value-based conditions (amount thresholds, item categories, time windows) | ❌ forces **role explosion** — "PO Approver ≤50K," "PO Approver ≤2L," "PO Approver — Electronics only," … combinatorially | ✅ native — this is ABAC's whole reason to exist | ⚠️ awkward; relations aren't naturally value-bearing | ✅ native, via a small JSONB **overlay** on top of role grants — no new paradigm to learn |
+| Models the org hierarchy (tenant → company → branch → warehouse) that drives 90% of Aivora's scoping needs | ✅ a natural fit — this *is* what scoped role assignment does | ⚠️ requires hierarchy-walking policy logic for every check | ✅ natural fit, but at the cost of standing up dedicated graph infrastructure | ✅ natural fit — reuses the same scoped-assignment mechanism RBAC already provides |
+| First-class **fraud / Segregation-of-Duties** modeling | ❌ not a concept in the model at all | ❌ not a concept in the model at all | ❌ not a concept in the model at all | ✅ purpose-built engine (§12.6) — this is the deciding factor for an ERP |
+| Operational cost (build, test, explain to auditors, onboard new admins) | Low | High — policies are code; testing them is a software project in itself | Very high — requires a dedicated relationship-graph service and a new mental model | Moderate — one familiar role model, two narrowly-scoped overlays |
+| Precedent in mature ERPs | Partial (most ERPs *start* here and outgrow it) | Rare as the primary model | Not used by ERP vendors | **This is what SAP (authorization objects + field values), Oracle Fusion (role-based + data security policies), and Microsoft Dynamics 365 (duties/privileges + business-event rules) all converge on** — independently arriving at the same hybrid shape |
+
+**Decision: Aivora adopts Role-Based Access Control as the structural backbone**
+— because it is auditable, matches the org hierarchy, and is the model every ERP
+administrator already understands — **and layers two narrow, targeted overlays on
+top of it**:
+
+1. An **ABAC overlay** (`role_permissions.condition_expr`, §12.5) so a single role
+   can carry value-based conditions ("approve POs up to ₹50,000," "only for
+   Electronics," "only outside business hours requires dual sign-off") *without*
+   spawning a new role for every threshold combination.
+2. A **Segregation-of-Duties engine** (`sod_conflict_rules` / `sod_violations`,
+   §12.6) that makes "no one person can both create and approve a payment" a
+   **declared, machine-checked invariant** rather than a hope embedded in training
+   material.
+
+A pure-ABAC or pure-ReBAC rebuild was rejected specifically because it would trade
+a problem Aivora *can* solve cleanly (role explosion, via a small JSONB column) for
+a problem it would then have to solve from scratch (auditability, fraud modeling)
+that the hybrid gets "for free" from RBAC's structure. **Time-boxed delegation**
+(§12.7) is added as a fifth, orthogonal layer because temporary role transfer
+("I'm on leave, route my approvals to Priya for two weeks") is an operational
+reality that, left unmanaged, is exactly how SoD violations and orphaned access
+actually happen in practice.
+
+### 12.2 The Layered Authorization Architecture
+
+Each layer below answers a different question, owns a different table (or column),
+and can be reasoned about — and audited — independently. A request is authorized
+only when it survives all five in sequence:
+
+```mermaid
+flowchart TD
+    L1["Layer 1 — Core RBAC §12.3\nWHO can do WHAT, WHERE\n(users, roles, permissions, user_roles)"]
+    L2["Layer 2 — Permission Scopes §12.4\nHow much of the data can they see\nwithin that action (TENANT…OWN)"]
+    L3["Layer 3 — ABAC Overlay §12.5\nUnder what CONDITIONS does\nthe grant apply (condition_expr JSONB)"]
+    L4["Layer 4 — SoD Engine §12.6\nDoes granting this create a\nFORBIDDEN COMBINATION with\nsomething this user already holds"]
+    L5["Layer 5 — Delegation §12.7\nIs this access being exercised\non someone else's behalf,\nand is that still time-valid"]
+    DECISION["§12.8 Authorization Decision\nALLOW (at narrowest passing scope) / DENY\n+ audit_logs entry, always (§12.11)"]
+
+    L1 --> L2 --> L3 --> L4 --> L5 --> DECISION
+
+    style L1 fill:#e1f0ff
+    style L2 fill:#e1f0ff
+    style L3 fill:#fff3cd
+    style L4 fill:#f8d7da
+    style L5 fill:#e2d9f3
+    style DECISION fill:#d4edda
+```
+
+| Layer | Mechanism | Owning schema | Solves |
+|---|---|---|---|
+| 1. Core RBAC | Named roles bundle atomic permissions; assignments are scoped to company/branch/warehouse | `roles`, `permissions`, `role_permissions`, `user_roles` | "Can this *kind* of user do this *kind* of action, in this *part* of the org?" — the 90% case, fully auditable as static data |
+| 2. Permission Scopes | A `scope` enum on each grant narrows data visibility independent of where the role is assigned | `role_permissions.scope` | "…and how much of the data can they see while doing it?" |
+| 3. ABAC Overlay | A `condition_expr` JSONB column attaches dynamic, value-based predicates to an *individual* grant | `role_permissions.condition_expr` | "…but only when the amount/category/time/requester satisfies X" — without multiplying roles |
+| 4. SoD Engine | Declared forbidden permission/role pairs are checked at assignment time (preventive) and by periodic scan (detective) | `sod_conflict_rules`, `sod_violations` | "…and does giving them this, combined with what they already have, create a fraud opportunity?" |
+| 5. Delegation | Time-boxed, approved transfer of a role's authority from one user to another | `role_delegations` | "…or are they exercising someone *else's* authority, and is that grant still within its valid window?" |
+
+### 12.3 Layer 1 — Core RBAC: Roles, Permissions, and Scoped Assignment
 
 ```mermaid
 erDiagram
@@ -1888,8 +2009,13 @@ erDiagram
   each nullable meaning "all"): a user can be a Warehouse Operator *only* for
   `DC-MUMBAI-01`, and simultaneously an AP Clerk for the whole company — multiple
   scoped role assignments compose into the user's effective permission set.
+- **Roles stay coarse on purpose.** The temptation in every RBAC rollout is to mint a
+  new role the moment a single exception appears ("PO Approver but only for IT
+  purchases"). Aivora deliberately pushes that kind of nuance down into Layer 3
+  (§12.5) so the role catalog stays small enough that a human — and an auditor — can
+  read the whole thing in one sitting.
 
-### 12.2 Permission Scopes
+### 12.4 Layer 2 — Permission Scopes
 
 `role_permissions.scope` adds a second dimension beyond the assignment scope —
 **data visibility within an action**:
@@ -1905,7 +2031,231 @@ erDiagram
 The **effective permission** for a request is the narrowest applicable scope granted —
 evaluated server-side, never trusted from the client.
 
-### 12.3 Authentication & Session Flow
+### 12.5 Layer 3 — Attribute-Based Conditional Grants (the ABAC Overlay)
+
+This is where Aivora deliberately departs from textbook RBAC, and it is the single
+change that prevents the role catalog from exploding. Rather than encoding "approve
+purchase orders up to ₹50,000" as a *role*, the threshold is encoded as **data**
+attached to the grant:
+
+```
+role_permissions row:
+  role_id        → "Branch Manager"
+  permission_id  → procurement.purchase_order.approve
+  scope          → BRANCH
+  condition_expr → {
+                      "max_amount": 50000,
+                      "currency": "INR",
+                      "exclude_if_requested_by_self": true
+                    }
+```
+
+A **Controller** can hold the *same* permission, at `COMPANY` scope, with
+`condition_expr: null` (unconditional — the textbook "escalation" case), and a
+**Regional Head** can hold it with `{"max_amount": 500000}`. Three roles, one
+permission code, zero duplicated authorization logic — the approval ladder is
+expressed entirely as rows of data that a non-engineer admin can review and edit.
+
+**Supported condition predicates** (evaluated server-side against live request
+context — never trusted from the client):
+
+| Key | Evaluated against | Example use |
+|---|---|---|
+| `max_amount` / `min_amount` | The transaction's monetary value | Tiered approval ladders (₹50K → ₹2L → ₹10L → unlimited) |
+| `item_categories` | `items.category_id` of the lines on the document | "Can approve stock write-offs, but only for the Perishables category" |
+| `time_window` | Server time at the moment of the request | "Out-of-hours GL postings require the Controller role, not just the AP Clerk" |
+| `exclude_if_requested_by_self` | Whether `requested_by = current_user` | The single most important predicate in the system — see §12.6, SOD-01 |
+| `warehouse_categories` / `branch_tags` | Tags on the scoping entity | "Only for warehouses tagged `bonded` " (customs-bonded stock) |
+
+```mermaid
+flowchart TD
+    A["Request: approve PO-2026-00417\nfor ₹1,80,000, raised by user U1"] --> B["Resolve candidate grants:\nrole_permissions rows where\npermission = procurement.purchase_order.approve\nAND scope covers this branch"]
+    B --> C{"Any grant with\ncondition_expr = null\n(unconditional)?"}
+    C -- yes --> ALLOW["ALLOW at that grant's scope\n→ proceed to Layer 4 (§12.6)"]
+    C -- no --> D{"Any grant whose condition_expr\nis satisfied by THIS request?\n(amount ≤ max_amount AND\nrequester ≠ approver AND …)"}
+    D -- yes --> ALLOW
+    D -- no --> ESCALATE["No satisfied grant at this scope —\nbubble to next-broader scope\n(BRANCH → COMPANY → TENANT)\nor return 403 if none remain"]
+    ESCALATE --> B
+```
+
+Because every `condition_expr` is **stored as plain JSONB and rendered in the admin
+UI as a readable rule** ("≤ ₹50,000, cannot approve own requests"), the auditability
+advantage of RBAC is preserved — an auditor still runs one query to see "everyone who
+can approve POs, and exactly under what conditions" — while gaining ABAC's expressive
+power exactly where the ERP domain actually needs it: money thresholds and
+self-approval exclusion. This is the same pattern Aivora already uses for
+`gl_posting_rules.condition_expr` (§8.2) — one mechanism, reused, rather than a
+second bespoke policy engine.
+
+### 12.6 Layer 4 — Segregation of Duties (SoD) Engine
+
+If Layer 3 is what makes the model *expressive enough*, Layer 4 is what makes it
+**trustworthy enough for an ERP** — and it is the layer that has no equivalent in a
+textbook RBAC/ABAC/ReBAC comparison, because general-purpose authorization theory
+doesn't have a concept of "fraud." Finance and audit teams don't ask "can user X do
+Y?" — they ask **"can any single person do Y *and* Z, and if so, why haven't we
+stopped that?"** Aivora answers that question as a first-class, queryable, *enforced*
+artifact rather than a policy document nobody re-reads after go-live.
+
+**Schema** (full DDL in §5.3):
+
+- **`sod_conflict_rules`** — the declared conflict matrix: pairs of permission codes
+  (or role names) that must never both be held by the same user at an overlapping
+  scope, each with a `severity` (`HIGH` / `MEDIUM` / `LOW`) and a human-readable
+  `description` an auditor can cite directly in a finding.
+- **`sod_violations`** — every detected conflict, with `status`
+  (`OPEN` → `WAIVED` *with a documented compensating control* → `REMEDIATED`),
+  `resolved_by`, and `resolution_notes`. This table is the audit trail's audit trail:
+  it proves not just that conflicts are *detected*, but that every one of them was
+  *seen by a human and explicitly dispositioned*.
+
+**Representative conflict matrix** (ships as system-defined rows; tenants may add
+their own):
+
+| Rule | Conflicting permissions / roles | Why it's dangerous | Severity |
+|---|---|---|---|
+| `SOD-01` | `procurement.purchase_order.create` **+** `procurement.purchase_order.approve` (same user) | Classic self-approval — raise a PO to a shell vendor and approve your own spend | HIGH |
+| `SOD-02` | `procurement.supplier.create_or_edit` **+** `procurement.purchase_order.approve` | Create a fictitious vendor, then approve POs to it — the #1 procurement fraud pattern | HIGH |
+| `SOD-03` | `inventory.grn.approve` **+** `finance.ap_invoice.approve` | Collusion to confirm receipt of goods that were never delivered, then pay for them | HIGH |
+| `SOD-04` | `finance.ap_invoice.create` **+** `finance.payment.approve` | Invoice the company, then approve your own payment run | HIGH |
+| `SOD-05` | `finance.payment.create` **+** `finance.payment.approve` | Violates the maker-checker principle that is non-negotiable for any cash movement | HIGH |
+| `SOD-06` | `sales.credit_limit.override` **+** `sales.sales_order.approve` | Wave through an order to a customer already over their approved credit exposure | MEDIUM |
+| `SOD-07` | `inventory.write_off.create` **+** `inventory.write_off.approve` | Self-approve inventory write-offs — the standard mechanism for concealing shrinkage/theft | HIGH |
+| `SOD-08` | `finance.gl_journal.create_manual` **+** `finance.gl_journal.post` (without a third-party reviewer) | Manual journal entries bypass the system-generated posting rules (§8.2) — the highest-risk GL surface, must always be maker-checker | HIGH |
+| `SOD-09` | `security.role.assign` **+** *holds any HIGH-severity permission above* | Privilege self-escalation — granting yourself (or a confederate) the very access this matrix exists to constrain | HIGH |
+| `SOD-10` | `finance.bank_reconciliation.perform` **+** `finance.bank_statement.upload` | Upload a doctored statement, then "reconcile" against it — classic concealment of skimmed cash | MEDIUM |
+
+**Enforcement is two-layered, matching how real audits work:**
+
+```mermaid
+sequenceDiagram
+    participant A as Admin
+    participant GW as API Gateway
+    participant SOD as SoD Engine
+    participant DB as PostgreSQL
+
+    Note over A,DB: PREVENTIVE — checked at the moment of assignment
+    A->>GW: Assign role "AP Clerk" to user U1
+    GW->>SOD: Would this grant + U1's existing\neffective permissions violate any sod_conflict_rules?
+    SOD->>DB: Query user_roles ⋈ role_permissions for U1,\ncompare codes against sod_conflict_rules
+    alt Conflict found
+        SOD-->>GW: BLOCK — return matching rule + plain-language reason
+        GW-->>A: 409 Conflict: "U1 already holds finance.ap_invoice.create;\nthis assignment would violate SOD-04"
+        Note over A: Admin must either choose a different user,\nor route through a documented exception/waiver workflow
+    else No conflict
+        SOD-->>GW: OK
+        GW->>DB: INSERT user_roles row
+    end
+
+    Note over A,DB: DETECTIVE — periodic sweep catches drift\n(roles edited after assignment, bulk imports, legacy data)
+    loop Nightly batch (and on every role/permission edit)
+        SOD->>DB: Scan all users' effective permission sets\nagainst sod_conflict_rules
+        SOD->>DB: INSERT sod_violations for every new match\n(status = OPEN, severity from the rule)
+    end
+    SOD-->>A: Surface OPEN violations on the\nCompliance dashboard for disposition
+```
+
+The preventive check stops the *easy* 90% of violations — the moment someone tries
+to assign a conflicting role. The detective sweep exists because real systems drift:
+permissions get added to an existing role months later, bulk CSV imports bypass the
+UI, or a tenant migrates legacy data with pre-existing conflicts. **Every `OPEN`
+violation must be explicitly `WAIVED` (with a named compensating control — e.g., "Both
+actions additionally require the Regional Controller's co-sign, logged in
+`audit_logs`") or `REMEDIATED`** — an unresolved HIGH-severity violation is surfaced
+on the Controller's and the tenant admin's dashboards and cannot be silently dismissed.
+This converts "we have a segregation-of-duties policy" from a sentence in an onboarding
+deck into a number — *open HIGH violations: 0* — that a SOX or ISO 27001 auditor can
+verify by querying the database directly.
+
+### 12.7 Layer 5 — Delegation & Temporal Access
+
+Every SoD model eventually meets its real-world adversary: **vacation**. A Branch
+Manager who is the sole holder of `procurement.purchase_order.approve` for
+`DC-PUNE-02` goes on two weeks' leave, and the business cannot simply stop approving
+purchase orders. The undocumented, un-audited workaround — "just give Rohan my
+password until I'm back" — is precisely how SoD violations and orphaned access
+actually enter real systems. Aivora makes the *legitimate* version of this
+first-class, time-boxed, and fully audited via `role_delegations` (full DDL in §5.3:
+`delegator_user_id`, `delegate_user_id`, `role_id`, optional
+`scope_company_id`/`scope_warehouse_id`, `valid_from`, `valid_until`, `status`,
+`approved_by`, `reason`).
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested: Delegator (or their manager)\nrequests transfer of role R\nto delegate, for [valid_from, valid_until]
+    Requested --> PendingApproval: Role R carries any\nsensitive/HIGH-severity permission\n(approval required — see below)
+    Requested --> Active: Role R is low-risk —\nauto-activates at valid_from
+    PendingApproval --> Active: Approver signs off\n(approved_by populated;\nSoD check re-run for the DELEGATE — §12.6)
+    PendingApproval --> Rejected: Approver declines\n(e.g., delegate already holds a conflicting permission)
+    Active --> Expired: System clock crosses valid_until —\nautomatic, no manual step required
+    Active --> Revoked: Delegator returns early,\nor admin force-revokes
+    Expired --> [*]
+    Revoked --> [*]
+    Rejected --> [*]
+```
+
+Three properties make this safe rather than merely convenient:
+
+- **The SoD engine runs again, against the *delegate*.** Transferring
+  `finance.payment.approve` to someone who already holds
+  `finance.payment.create` would recreate `SOD-05` in a different person — the
+  same preventive check from §12.6 fires at delegation-approval time, not just at
+  direct role assignment.
+- **Expiry is structural, not procedural.** `valid_until` is enforced in the
+  effective-permission resolution query itself (`WHERE status = 'ACTIVE' AND now()
+  BETWEEN valid_from AND valid_until`) — there is no "remember to revoke this on
+  Friday" step for an admin to forget. A delegation that nobody remembered to close
+  out simply stops working the moment its window ends.
+- **Every action taken under delegation is doubly attributed.** `audit_logs`
+  records both `actor_user_id` (the delegate, who physically clicked approve) and
+  `acting_as_delegation_id` (linking back to the `role_delegations` row), so a
+  post-incident review can answer both "who actually did this?" and "under whose
+  authority were they acting, and was that authority valid at the time?" in a
+  single query.
+
+### 12.8 End-to-End Authorization Decision Flow
+
+Putting all five layers together, here is what happens, in order, for a single
+incoming request — e.g., `POST /procurement/purchase-orders/{id}/approve`:
+
+```mermaid
+flowchart TD
+    START(["Authenticated request arrives\n(JWT verified — §12.9)"]) --> RESOLVE["Resolve effective grant set:\nDIRECT grants (user_roles ⋈ role_permissions)\nUNION\nACTIVE delegated grants (role_delegations, §12.7)\nWHERE permission = required code"]
+    RESOLVE --> ANY{"Any candidate\ngrants found?"}
+    ANY -- "no" --> DENY["DENY (403)\n+ audit_logs entry\n(decision = DENIED, reason = NO_GRANT)"]
+    ANY -- "yes" --> SCOPE["Layer 2 (§12.4): does the grant's scope\n(TENANT…OWN) cover the requested resource?\nKeep narrowest passing scope"]
+    SCOPE --> COND{"Layer 3 (§12.5):\nis condition_expr null,\nor satisfied by this\nrequest's attributes?"}
+    COND -- "no, and no broader\nscope remains" --> DENY
+    COND -- "no, broader\nscope exists" --> SCOPE
+    COND -- "yes" --> SOD["Layer 4 (§12.6): does exercising this\ngrant complete a forbidden combination\nwith something this user already did/holds?\n(synchronous check for HIGH-severity rules\non state-changing actions)"]
+    SOD -- "conflict" --> DENY2["DENY (409)\n+ audit_logs entry\n(decision = BLOCKED_SOD, rule = SOD-xx)\n+ surfaced to Compliance dashboard"]
+    SOD -- "clear" --> ALLOW["ALLOW at narrowest passing scope\n→ apply field-masking + RLS (§12.10)\n→ execute the action"]
+    ALLOW --> AUDIT["Always: write audit_logs row\n(actor, acting_as_delegation_id if any,\nbefore/after state, decision = ALLOWED) — §12.11"]
+    DENY --> AUDIT2["Always: write audit_logs row\n(decision = DENIED/BLOCKED_SOD) — §12.11"]
+    DENY2 --> AUDIT2
+
+    style ALLOW fill:#d4edda
+    style DENY fill:#f8d7da
+    style DENY2 fill:#f8d7da
+    style AUDIT fill:#e2e3e5
+    style AUDIT2 fill:#e2e3e5
+```
+
+Two design choices are deliberate and worth calling out:
+
+- **Every branch — allowed, denied, or blocked — writes to `audit_logs`.** A
+  *denied* attempt to approve one's own purchase order is, from a fraud-detection
+  standpoint, at least as interesting as a successful one. Logging only successes
+  (the common shortcut) would blind the anomaly-detection service (§15.4 / §12.11)
+  to exactly the probing behavior it most needs to see.
+- **The SoD check (Layer 4) runs *after* the grant is otherwise confirmed valid**,
+  not before. This ordering means a user without the underlying permission gets a
+  clean, generic `403` (revealing nothing about the conflict matrix to an
+  unauthorized caller), while a user who *does* have the permission but would
+  complete a forbidden combination gets a specific, auditable `409` — the
+  distinction itself is a small but real piece of defense-in-depth.
+
+### 12.9 Authentication & Session Flow
 
 ```mermaid
 sequenceDiagram
@@ -1929,10 +2279,12 @@ sequenceDiagram
     Note over AUTH,DB: Every privileged action (CREATE/UPDATE/DELETE/APPROVE)\nadditionally writes an audit_logs row (before/after state)
 ```
 
-- **JWT claims** carry `tenant_id`, `user_id`, and a compact role-reference (not the full
-  permission set, which can change between token refreshes) — the gateway re-resolves
-  effective permissions from `user_roles`/`role_permissions` on each request (cached with
-  short TTL) so that role changes (e.g., immediate suspension) take effect without
+- **JWT claims** carry `tenant_id`, `user_id`, and a compact role-reference (not the
+  full permission set, which can change between token refreshes — and now can also
+  change mid-session via delegation activation/expiry, §12.7) — the gateway
+  re-resolves effective permissions from `user_roles`/`role_permissions`/
+  `role_delegations` on each request (cached with a short TTL) so that role changes
+  (e.g., immediate suspension, a delegation expiring at midnight) take effect without
   waiting for token expiry.
 - **MFA** is enforced for roles holding sensitive permissions (financial posting, user
   management, tenant configuration) regardless of per-user preference — a
@@ -1941,7 +2293,7 @@ sequenceDiagram
   set and are tracked identically to user sessions for audit purposes, with
   `actor_type = 'API_KEY'` in `audit_logs`.
 
-### 12.4 Field- and Row-Level Controls
+### 12.10 Field- and Row-Level Controls
 
 Beyond endpoint-level RBAC, two finer-grained mechanisms apply:
 
@@ -1955,7 +2307,7 @@ Beyond endpoint-level RBAC, two finer-grained mechanisms apply:
   query can never return another tenant's — or another warehouse's — rows" true even if
   an application-layer check is missed.
 
-### 12.5 Audit Trail as a Security Control
+### 12.11 Audit Trail as a Security Control
 
 `audit_logs` is not just a compliance report — it is a **security control** in its own
 right:
@@ -1963,13 +2315,21 @@ right:
 - The runtime database role has `INSERT`-only privilege on `audit_logs` (no `UPDATE`,
   no `DELETE`), enforced identically to the inventory and GL ledgers (§7.1, §8.1).
   Tamper-evidence is structural, not procedural.
-- Every privileged mutation captures `before_state`/`after_state` as JSONB snapshots —
-  enabling point-in-time reconstruction of "what did this record look like before this
-  user changed it," which is the exact question security incident response and
-  compliance audits ask first.
-- `login_history` and `audit_logs` together feed the anomaly-detection AI service
-  (§15.4) — unusual access patterns (e.g., a user suddenly exporting large datasets, or
-  approving their own purchase orders) are flagged for review automatically.
+- Every privileged mutation captures `before_state`/`after_state` as JSONB snapshots,
+  the **authorization decision** that permitted or blocked it (§12.8: `ALLOWED` /
+  `DENIED` / `BLOCKED_SOD`), and — when applicable — the `acting_as_delegation_id`
+  (§12.7) under which it was performed. Together these enable point-in-time
+  reconstruction not just of "what did this record look like before this user changed
+  it," but of "*by what authority* were they allowed to change it at all" — which is
+  the exact sequence of questions a security incident review and a compliance audit
+  ask, in that order.
+- `login_history`, `audit_logs`, and `sod_violations` together feed the
+  anomaly-detection AI service (§15.4) — unusual access patterns (a user suddenly
+  exporting large datasets, repeatedly attempting actions that get `BLOCKED_SOD`, or
+  approving an unusual volume of their own prior requests just before a delegation
+  expires) are correlated and flagged for review automatically, closing the loop from
+  *declared* policy (§12.6's matrix) to *observed* behavior.
+
 
 ---
 
@@ -2019,7 +2379,7 @@ Tenant (the SaaS customer account, e.g. "Aivora subscriber: Meridian Group")
   fiscal year, GST registration, financial statements per `companies` row) — required
   because group structures routinely span multiple legal entities with consolidated
   reporting needs.
-- **`branch_id`** / **`warehouse_id`** provide operational and RBAC scoping (§12.1)
+- **`branch_id`** / **`warehouse_id`** provide operational and RBAC scoping (§12.3)
   without implying separate books.
 
 Inter-company transactions (e.g., Company A sells to Company B within the same group)
@@ -2045,7 +2405,7 @@ This means **even a bug that omits a `WHERE tenant_id = ...` clause in applicati
 cannot leak cross-tenant data** — the database itself refuses to return or accept rows
 outside the session's tenant. Warehouse-scoped roles add a second policy layer comparing
 `warehouse_id` against an allow-list session variable, giving defense-in-depth beyond
-the application-level RBAC checks (§12.4).
+the application-level RBAC checks (§12.10).
 
 The runtime database role used by the application has **no `BYPASSRLS` privilege** —
 only a narrowly-scoped maintenance role (used solely for migrations and the
@@ -2125,7 +2485,7 @@ External Callers                         API Surface                          In
 
 | Concern | Implementation |
 |---|---|
-| AuthN | OIDC/JWT bearer tokens; API keys for M2M (§12.3) |
+| AuthN | OIDC/JWT bearer tokens; API keys for M2M (§12.9) |
 | AuthZ | Permission-code resolution per endpoint + RLS session variables (§12, §13.3) |
 | Tenant resolution | Subdomain/custom-domain/claim-based routing to the correct connection pool (§13.1) |
 | Rate limiting & quotas | Per-tenant, per-API-key, plan-based (`tenant_subscriptions`) |
@@ -2299,7 +2659,7 @@ RBAC/audit/approval machinery as a human-originated one.
 | **Mobile / Scanner app** | React Native or Progressive Web App with offline-first local store (WatermelonDB / SQLite + sync engine) | Code-sharing with the web TypeScript codebase; mature offline-sync patterns for warehouse connectivity gaps (§9.2) |
 | **Primary database** | PostgreSQL 16+ | Native Row-Level Security (§13.3), declarative partitioning (§6.1), `JSONB` for flexible payloads (`ai_recommendations.payload`, `audit_logs` snapshots), strong transactional guarantees for ledger integrity, mature ecosystem (Prisma already in use) |
 | **ORM / migrations** | Prisma — already in use (`apps/api/prisma/schema.prisma`) | Type-safe queries matching the TypeScript-first stack; explicit migration history supports the "schema as code, reviewed like code" discipline financial systems require |
-| **Caching / session store** | Redis | Permission-resolution cache (§12.3), rate-limit counters, idempotency-key tracking (§14.2), session/refresh-token store |
+| **Caching / session store** | Redis | Permission-resolution cache (§12.9), rate-limit counters, idempotency-key tracking (§14.2), session/refresh-token store |
 | **Streaming / event bus** | Apache Kafka (or managed equivalent: AWS MSK / Confluent Cloud / Azure Event Hubs / GCP Pub/Sub with Kafka-compatible API) | Durable, replayable event log — a natural fit for "every domain event becomes an AI training signal" (§15.1); decouples integrations and AI consumers from OLTP load |
 | **Search / full-text** | OpenSearch / Elasticsearch | Item/supplier/customer search, faceted filtering, operational dashboards over event data |
 | **AI/ML platform** | Python (FastAPI services) + PyTorch/scikit-learn/Prophet for modeling; orchestration via Airflow or Dagster; served via a model-serving layer (e.g., managed endpoints / Triton / BentoML) | Python remains the dominant ML ecosystem; isolating AI services in their own runtime (§15.5) avoids forcing ML tooling constraints onto the transactional backend |
@@ -2621,5 +2981,6 @@ flowchart TD
 |---|---|---|
 | 1.0 | 2026 (initial) | Executive summary, core principles, module list, high-level ER map, ~170-table footprint estimate |
 | 2.0 | 2026-06-06 | Full expansion: business requirements, functional architecture, 124-table domain inventory with ER diagrams, backbone-table schema definitions with PK/FK conventions, Inventory Ledger and GL posting flow designs, Warehouse/Barcode and Batch/Serial traceability architectures, GST/Tax architecture, RBAC model, Multi-Tenant SaaS design, API architecture, AI/ML roadmap, technology stack recommendations, multi-cloud deployment architecture, and UML/data-flow diagrams |
+| 2.1 | 2026-06-06 | Redesigned §12 RBAC Security Model as a layered **hybrid RBAC + ABAC + Segregation-of-Duties + Delegation** architecture, with an explicit comparison against pure-RBAC/ABAC/ReBAC alternatives; added `sod_conflict_rules`, `sod_violations`, and `role_delegations` tables plus a `condition_expr JSONB` overlay on `role_permissions` for value-based conditional grants; domain inventory grows from 124 → **127 tables** (Security & RBAC: 10 → 13) |
 
 
