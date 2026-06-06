@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+// Authenticated pages fetch live data per-request — never statically prerender them.
+export const dynamic = 'force-dynamic';
+
 const navLinks = [{ href: '/users', label: 'Users' }];
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
