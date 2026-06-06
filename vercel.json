@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install",
+  "installCommand": "npm install --include=dev",
   "framework": "nextjs",
   "devCommand": "npm run dev --workspace=apps/web",
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- apps/web/ packages/ package-lock.json"
