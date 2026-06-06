@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build --workspace=packages/shared && cd apps/api && npx prisma generate && npm run build",
+  "installCommand": "npm install",
+  "functions": {
+    "apps/api/api/index.ts": {
+      "maxDuration": 30,
+      "memory": 512
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/apps/api/api/index.ts"
+    }
+  ],
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- apps/api/ packages/ package-lock.json"
+}
