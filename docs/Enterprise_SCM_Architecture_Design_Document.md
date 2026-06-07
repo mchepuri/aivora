@@ -29,7 +29,7 @@
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary!
 
 Aivora is a next-generation, AI-enabled Supply Chain Management (SCM) / ERP platform
 designed to unify procurement, inventory, warehouse operations, sales & distribution,
@@ -38,7 +38,7 @@ finance, taxation, and analytics into a single, modular, multi-tenant system of 
 Unlike legacy ERPs that mutate balances in place, Aivora is **ledger-driven**: every
 inventory movement and every financial event is captured as an **immutable transaction**
 in an Inventory Ledger or General Ledger. Current-state balances (stock on hand, account
-balances, customer/supplier dues) are *derived* by aggregating ledger entries, not stored
+balances, customer/supplier dues) are _derived_ by aggregating ledger entries, not stored
 and mutated directly. This produces a fully auditable, replayable system of record that is
 naturally suited to AI/ML consumption — every state change is an explainable, timestamped
 event.
@@ -76,22 +76,23 @@ AI/ML roadmap.
 
 ### 2.1 Stakeholders & Personas
 
-| Persona | Primary Needs |
-|---|---|
-| Warehouse Operator | Fast barcode/RFID scanning for putaway, picking, packing, cycle counts; mobile-first UI |
-| Procurement Manager | Supplier comparison, PO creation/approval, AI-driven reorder suggestions |
-| Sales / Order Desk | Order entry, available-to-promise checks, pricing, dispatch tracking |
-| Inventory Controller | Real-time stock visibility, batch/serial traceability, ledger reconciliation |
-| Accountant / Controller | AP/AR processing, GL close, tax filing, financial reporting |
-| Compliance Officer | GST/e-invoice compliance, audit trails, document retention |
-| Tenant Admin | User/role management, configuration of company, tax codes, numbering, workflows |
-| Platform Admin (Aivora) | Tenant provisioning, billing, platform health, security monitoring |
-| Data Scientist / AI Engineer | Clean event-level data access for forecasting and ML model training |
-| Executive / Finance Leadership | Dashboards: working capital, inventory turns, margin, cash flow |
+| Persona                        | Primary Needs                                                                           |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| Warehouse Operator             | Fast barcode/RFID scanning for putaway, picking, packing, cycle counts; mobile-first UI |
+| Procurement Manager            | Supplier comparison, PO creation/approval, AI-driven reorder suggestions                |
+| Sales / Order Desk             | Order entry, available-to-promise checks, pricing, dispatch tracking                    |
+| Inventory Controller           | Real-time stock visibility, batch/serial traceability, ledger reconciliation            |
+| Accountant / Controller        | AP/AR processing, GL close, tax filing, financial reporting                             |
+| Compliance Officer             | GST/e-invoice compliance, audit trails, document retention                              |
+| Tenant Admin                   | User/role management, configuration of company, tax codes, numbering, workflows         |
+| Platform Admin (Aivora)        | Tenant provisioning, billing, platform health, security monitoring                      |
+| Data Scientist / AI Engineer   | Clean event-level data access for forecasting and ML model training                     |
+| Executive / Finance Leadership | Dashboards: working capital, inventory turns, margin, cash flow                         |
 
 ### 2.2 Functional Requirements (by Module)
 
 **Security & RBAC**
+
 - FR-1: System shall support role-based access control with hierarchical roles and
   fine-grained permissions at the module/action/field level.
 - FR-2: System shall support row-level security scoped by tenant, warehouse, and
@@ -100,17 +101,20 @@ AI/ML roadmap.
   immutable audit trail.
 
 **Master Data**
+
 - FR-4: System shall maintain a single, de-duplicated master for items, suppliers,
   customers, warehouses, locations, units of measure, price lists, and tax codes.
 - FR-5: Items shall support hierarchical categorization, multiple UOMs with conversion
   factors, and configurable attributes (dimensions, weight, HSN/SAC codes, shelf life).
 
 **Supplier & Customer Management**
+
 - FR-6: System shall maintain supplier/customer profiles including contacts, addresses,
   bank details, tax registrations (GSTIN/VAT ID), credit terms, and performance ratings.
 - FR-7: System shall support supplier onboarding and approval workflows.
 
 **Procurement**
+
 - FR-8: System shall support purchase requisitions, RFQs, purchase orders, goods
   receipts, and three-way matching (PO ↔ GRN ↔ Invoice).
 - FR-9: System shall support partial receipts, over/under-delivery tolerances, and
@@ -119,6 +123,7 @@ AI/ML roadmap.
   consumption history, lead time, and forecasted demand.
 
 **Warehouse Management**
+
 - FR-11: System shall support multiple warehouses, zones, aisles, racks, bins, and
   license-plate (container) based movements.
 - FR-12: System shall support barcode/QR/RFID scanning for receiving, putaway, picking,
@@ -127,6 +132,7 @@ AI/ML roadmap.
   task assignment.
 
 **Inventory Management**
+
 - FR-14: All inventory changes shall be recorded as immutable Inventory Ledger entries;
   on-hand, allocated, and available quantities shall be derived, never directly mutated.
 - FR-15: System shall support batch/lot tracking, serial number tracking, expiry-date
@@ -135,12 +141,14 @@ AI/ML roadmap.
   cycle-count reconciliation, each generating ledger entries with full reason coding.
 
 **Sales & Distribution**
+
 - FR-17: System shall support quotations, sales orders, allocation/ATP checks, pick-pack-
   ship workflows, and delivery/shipment tracking.
 - FR-18: System shall support flexible pricing (price lists, customer-specific pricing,
   promotions, volume discounts) and credit-limit checks at order entry.
 
 **GST & Taxation**
+
 - FR-19: System shall calculate taxes (e.g., CGST/SGST/IGST/cess for India GST, or
   VAT/sales tax for other regimes) based on configurable tax codes, place-of-supply
   rules, and HSN/SAC mappings.
@@ -148,6 +156,7 @@ AI/ML roadmap.
   tax reports (e.g., GSTR-1/GSTR-3B equivalents).
 
 **Accounts Payable / Receivable / General Ledger**
+
 - FR-21: System shall generate AP invoices from GRNs/PO matching and AR invoices from
   shipments, post them to the GL as balanced double-entry journals, and track
   payments/receipts against open items.
@@ -158,6 +167,7 @@ AI/ML roadmap.
   statements (P&L, Balance Sheet, Cash Flow).
 
 **Reporting & Analytics / AI**
+
 - FR-24: System shall provide role-based dashboards and scheduled/ad-hoc reports across
   all modules.
 - FR-25: System shall expose a governed data layer (views/event streams) for AI/ML
@@ -166,17 +176,17 @@ AI/ML roadmap.
 
 ### 2.3 Non-Functional Requirements
 
-| Category | Requirement |
-|---|---|
-| Scalability | Support 1,000+ tenants, 10M+ ledger rows per tenant per year, horizontal scale-out of API and worker tiers |
-| Availability | ≥ 99.9% uptime for core transactional services; multi-AZ deployment |
-| Performance | P95 API latency < 300ms for transactional endpoints; sub-second barcode scan acknowledgement |
-| Auditability | Every create/update/delete on financial and inventory data is attributable, timestamped, and immutable |
-| Data Isolation | Strict tenant isolation (logical or physical) with no cross-tenant data leakage |
-| Compliance | GST/e-invoicing (India), SOC 2-aligned controls, configurable data-retention policies |
-| Extensibility | New modules/fields/workflows addable via configuration, not schema rewrites, where possible |
-| Internationalization | Multi-currency, multi-language, multi-tax-regime support |
-| Offline Support | Warehouse mobile apps must queue scans offline and sync when connectivity returns |
+| Category             | Requirement                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Scalability          | Support 1,000+ tenants, 10M+ ledger rows per tenant per year, horizontal scale-out of API and worker tiers |
+| Availability         | ≥ 99.9% uptime for core transactional services; multi-AZ deployment                                        |
+| Performance          | P95 API latency < 300ms for transactional endpoints; sub-second barcode scan acknowledgement               |
+| Auditability         | Every create/update/delete on financial and inventory data is attributable, timestamped, and immutable     |
+| Data Isolation       | Strict tenant isolation (logical or physical) with no cross-tenant data leakage                            |
+| Compliance           | GST/e-invoicing (India), SOC 2-aligned controls, configurable data-retention policies                      |
+| Extensibility        | New modules/fields/workflows addable via configuration, not schema rewrites, where possible                |
+| Internationalization | Multi-currency, multi-language, multi-tax-regime support                                                   |
+| Offline Support      | Warehouse mobile apps must queue scans offline and sync when connectivity returns                          |
 
 ---
 
@@ -244,21 +254,21 @@ AI/ML roadmap.
 
 ### 3.3 Module Responsibilities (Summary)
 
-| Module | Responsibility | Key Outputs |
-|---|---|---|
-| Security & RBAC | AuthN/AuthZ, roles, permissions, audit log | Session tokens, audit events |
-| Master Data | Items, UOM, price lists, tax codes, locations | Canonical reference data |
-| Supplier / Customer Mgmt | Party master, contacts, credit, ratings | Supplier/customer records |
-| Procurement | Requisition → RFQ → PO → GRN → Invoice match | POs, GRNs, AP source docs |
-| Warehouse Mgmt | Bin/zone topology, tasks, scanning, cycle count | Movement instructions, scan events |
-| Inventory Ledger | Immutable stock movement records, balance derivation | Ledger entries, stock snapshots |
-| Sales & Distribution | Quote → Order → Allocation → Pick/Pack/Ship | Sales orders, shipments, AR source docs |
-| GST & Taxation | Tax computation, e-invoicing, statutory reports | Tax lines, e-invoice payloads, returns |
-| Accounts Payable | Vendor invoice processing, payments | AP invoices, payment vouchers |
-| Accounts Receivable | Customer invoicing, collections | AR invoices, receipts |
-| General Ledger | Double-entry posting, period close, statements | GL journals, trial balance, financials |
-| Reporting & Analytics | Dashboards, scheduled reports, data exports | Reports, exports, BI feeds |
-| AI / ML Services | Forecasting, recommendations, anomaly detection | Predictions, suggested actions |
+| Module                   | Responsibility                                       | Key Outputs                             |
+| ------------------------ | ---------------------------------------------------- | --------------------------------------- |
+| Security & RBAC          | AuthN/AuthZ, roles, permissions, audit log           | Session tokens, audit events            |
+| Master Data              | Items, UOM, price lists, tax codes, locations        | Canonical reference data                |
+| Supplier / Customer Mgmt | Party master, contacts, credit, ratings              | Supplier/customer records               |
+| Procurement              | Requisition → RFQ → PO → GRN → Invoice match         | POs, GRNs, AP source docs               |
+| Warehouse Mgmt           | Bin/zone topology, tasks, scanning, cycle count      | Movement instructions, scan events      |
+| Inventory Ledger         | Immutable stock movement records, balance derivation | Ledger entries, stock snapshots         |
+| Sales & Distribution     | Quote → Order → Allocation → Pick/Pack/Ship          | Sales orders, shipments, AR source docs |
+| GST & Taxation           | Tax computation, e-invoicing, statutory reports      | Tax lines, e-invoice payloads, returns  |
+| Accounts Payable         | Vendor invoice processing, payments                  | AP invoices, payment vouchers           |
+| Accounts Receivable      | Customer invoicing, collections                      | AR invoices, receipts                   |
+| General Ledger           | Double-entry posting, period close, statements       | GL journals, trial balance, financials  |
+| Reporting & Analytics    | Dashboards, scheduled reports, data exports          | Reports, exports, BI feeds              |
+| AI / ML Services         | Forecasting, recommendations, anomaly detection      | Predictions, suggested actions          |
 
 ---
 
@@ -564,7 +574,7 @@ Document -> Approval Request -> Approval Workflow -> Approval Step
 
 ### 5.1 Notation & Standard Columns
 
-Schemas below use a compact DDL-style notation: `column_name  TYPE  constraints/notes`.
+Schemas below use a compact DDL-style notation: `column_name TYPE constraints/notes`.
 **🔑** marks the primary key; **→** denotes a foreign key reference.
 
 Every table in the system (unless explicitly noted as immutable/append-only) carries the
@@ -1313,12 +1323,12 @@ TABLE approval_requests                                             [Workflow]
 
 ### 6.1 Primary Key Strategy
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Key type | **UUID v7** (time-ordered UUID) as surrogate PK on every table | Globally unique across tenants/shards, safe for offline-generated records (mobile scanners create IDs before sync), and the v7 time-ordering keeps index locality (avoids the random-UUID b-tree fragmentation problem) |
-| Natural keys | Preserved as **unique constraints**, never as PKs (e.g., `(company_id, sku)` on `items`, `(company_id, po_number)` on `purchase_orders`) | Business identifiers can be renumbered/corrected without cascading PK changes |
-| Ledger sequence | `inventory_ledger.entry_no` and `gl_journal_headers.journal_no` are **monotonic, gapless, per-company sequences** in addition to the UUID PK | Statutory requirements (e.g., GST invoice sequencing) and ledger-replay/audit demand a strict, contiguous ordering that UUIDs (even v7) do not guarantee under concurrent inserts |
-| High-volume children | `inventory_ledger`, `gl_journal_lines`, `audit_logs`, `tax_transactions` are **range-partitioned by `(company_id, occurred_at / journal_date)`** | Keeps indexes small, enables cheap retention/archival of old partitions, and lets the query planner prune partitions for period-bounded reports |
+| Decision             | Choice                                                                                                                                           | Rationale                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Key type             | **UUID v7** (time-ordered UUID) as surrogate PK on every table                                                                                   | Globally unique across tenants/shards, safe for offline-generated records (mobile scanners create IDs before sync), and the v7 time-ordering keeps index locality (avoids the random-UUID b-tree fragmentation problem) |
+| Natural keys         | Preserved as **unique constraints**, never as PKs (e.g., `(company_id, sku)` on `items`, `(company_id, po_number)` on `purchase_orders`)         | Business identifiers can be renumbered/corrected without cascading PK changes                                                                                                                                           |
+| Ledger sequence      | `inventory_ledger.entry_no` and `gl_journal_headers.journal_no` are **monotonic, gapless, per-company sequences** in addition to the UUID PK     | Statutory requirements (e.g., GST invoice sequencing) and ledger-replay/audit demand a strict, contiguous ordering that UUIDs (even v7) do not guarantee under concurrent inserts                                       |
+| High-volume children | `inventory_ledger`, `gl_journal_lines`, `audit_logs`, `tax_transactions` are **range-partitioned by `(company_id, occurred_at / journal_date)`** | Keeps indexes small, enables cheap retention/archival of old partitions, and lets the query planner prune partitions for period-bounded reports                                                                         |
 
 ### 6.2 Foreign Key Conventions
 
@@ -1326,7 +1336,7 @@ TABLE approval_requests                                             [Workflow]
   `warehouse_id → warehouses.id`). Self-references use a role prefix
   (`parent_category_id`, `reverses_entry_id`).
 - **Tenant scoping**: Every table carries `tenant_id` (directly or transitively via
-  `company_id`). Foreign keys are always validated *and* row-level-security-checked
+  `company_id`). Foreign keys are always validated _and_ row-level-security-checked
   within the same tenant — cross-tenant FK references are structurally impossible
   (enforced by Postgres RLS policies, see §13.3).
 - **`ON DELETE` behavior**:
@@ -1338,7 +1348,7 @@ TABLE approval_requests                                             [Workflow]
     reachable while the header is in `DRAFT` status; application logic blocks deletion
     of posted documents regardless of DB-level cascade.
   - Optional links used purely for traceability (`ap_invoices.grn_id`,
-    `inventory_ledger.batch_id`) → **`ON DELETE SET NULL`** is *not* used; these
+    `inventory_ledger.batch_id`) → **`ON DELETE SET NULL`** is _not_ used; these
     point at append-only or restrict-only tables that are never deleted.
 - **`ON UPDATE`**: `CASCADE` everywhwere (PKs are immutable UUIDs, so this never fires
   in practice — it exists purely as a safety net).
@@ -1348,26 +1358,26 @@ TABLE approval_requests                                             [Workflow]
 
 ### 6.3 Consolidated Foreign-Key Reference Map (Backbone Tables)
 
-| Table | Key Foreign Keys |
-|---|---|
-| `companies` | `tenant_id → tenants`, `base_currency_id → currencies` |
-| `users` / `roles` / `user_roles` | `tenant_id → tenants`; `user_roles`: `user_id → users`, `role_id → roles`, `company_id/branch_id/warehouse_id` (scope) |
-| `sod_conflict_rules` / `sod_violations` | `tenant_id → tenants`; rules: `permission_a_code/permission_b_code → permissions.code`; violations: `user_id → users`, `conflict_rule_id → sod_conflict_rules`, `resolved_by → users` |
-| `role_delegations` | `delegator_user_id → users`, `delegate_user_id → users`, `role_id → roles`, `scope_company_id → companies`, `scope_warehouse_id → warehouses`, `approved_by → users` |
-| `items` | `company_id → companies`, `category_id → item_categories`, `base_uom_id → units_of_measure`, `hsn_sac_code → hsn_sac_codes` |
-| `suppliers` / `customers` | `company_id → companies`, `default_currency_id → currencies`, `payment_term_id → payment_terms` |
-| `purchase_orders` | `company_id → companies`, `supplier_id → suppliers`, `warehouse_id → warehouses`, `currency_id → currencies` |
-| `purchase_order_lines` | `purchase_order_id → purchase_orders`, `item_id → items`, `uom_id → units_of_measure`, `tax_code_id → tax_codes` |
-| `goods_receipt_notes/lines` | `purchase_order_id → purchase_orders`, `warehouse_id → warehouses`; lines: `grn_id`, `po_line_id`, `item_id`, `batch_id`, `bin_id`, `inventory_ledger_id` |
-| `inventory_ledger` | `company_id`, `item_id`, `warehouse_id`, `bin_id`, `batch_id`, `serial_id`, `valuation_layer_id`, `reverses_entry_id → inventory_ledger` (self) |
-| `inventory_balances` | `item_id`, `warehouse_id`, `bin_id`, `batch_id` — composite unique, derived watermark `last_ledger_entry_no` |
-| `sales_orders/lines` | `company_id`, `customer_id → customers`, `warehouse_id → warehouses`; lines: `item_id`, `uom_id`, `tax_code_id` |
-| `shipments` | `sales_order_id → sales_orders`, `warehouse_id → warehouses` |
-| `ap_invoices` | `supplier_id → suppliers`, `grn_id → goods_receipt_notes`, `purchase_order_id → purchase_orders`, `gl_journal_id → gl_journal_headers` |
-| `ar_invoices` | `customer_id → customers`, `shipment_id → shipments`, `sales_order_id → sales_orders`, `e_invoice_id → e_invoices`, `gl_journal_id → gl_journal_headers` |
-| `gl_journal_headers/lines` | headers: `company_id`, `fiscal_period_id → fiscal_periods`, `posting_rule_id → gl_posting_rules`, `reverses_journal_id → gl_journal_headers` (self); lines: `journal_header_id`, `account_id → chart_of_accounts`, `cost_center_id → cost_centers` |
-| `tax_transactions` | `company_id`, `tax_code_id → tax_codes`, `gl_journal_line_id → gl_journal_lines`, polymorphic `source_document_type/id` |
-| `inventory_valuation_layers` | `item_id`, `warehouse_id`, `receipt_ledger_id → inventory_ledger` |
+| Table                                   | Key Foreign Keys                                                                                                                                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `companies`                             | `tenant_id → tenants`, `base_currency_id → currencies`                                                                                                                                                                                             |
+| `users` / `roles` / `user_roles`        | `tenant_id → tenants`; `user_roles`: `user_id → users`, `role_id → roles`, `company_id/branch_id/warehouse_id` (scope)                                                                                                                             |
+| `sod_conflict_rules` / `sod_violations` | `tenant_id → tenants`; rules: `permission_a_code/permission_b_code → permissions.code`; violations: `user_id → users`, `conflict_rule_id → sod_conflict_rules`, `resolved_by → users`                                                              |
+| `role_delegations`                      | `delegator_user_id → users`, `delegate_user_id → users`, `role_id → roles`, `scope_company_id → companies`, `scope_warehouse_id → warehouses`, `approved_by → users`                                                                               |
+| `items`                                 | `company_id → companies`, `category_id → item_categories`, `base_uom_id → units_of_measure`, `hsn_sac_code → hsn_sac_codes`                                                                                                                        |
+| `suppliers` / `customers`               | `company_id → companies`, `default_currency_id → currencies`, `payment_term_id → payment_terms`                                                                                                                                                    |
+| `purchase_orders`                       | `company_id → companies`, `supplier_id → suppliers`, `warehouse_id → warehouses`, `currency_id → currencies`                                                                                                                                       |
+| `purchase_order_lines`                  | `purchase_order_id → purchase_orders`, `item_id → items`, `uom_id → units_of_measure`, `tax_code_id → tax_codes`                                                                                                                                   |
+| `goods_receipt_notes/lines`             | `purchase_order_id → purchase_orders`, `warehouse_id → warehouses`; lines: `grn_id`, `po_line_id`, `item_id`, `batch_id`, `bin_id`, `inventory_ledger_id`                                                                                          |
+| `inventory_ledger`                      | `company_id`, `item_id`, `warehouse_id`, `bin_id`, `batch_id`, `serial_id`, `valuation_layer_id`, `reverses_entry_id → inventory_ledger` (self)                                                                                                    |
+| `inventory_balances`                    | `item_id`, `warehouse_id`, `bin_id`, `batch_id` — composite unique, derived watermark `last_ledger_entry_no`                                                                                                                                       |
+| `sales_orders/lines`                    | `company_id`, `customer_id → customers`, `warehouse_id → warehouses`; lines: `item_id`, `uom_id`, `tax_code_id`                                                                                                                                    |
+| `shipments`                             | `sales_order_id → sales_orders`, `warehouse_id → warehouses`                                                                                                                                                                                       |
+| `ap_invoices`                           | `supplier_id → suppliers`, `grn_id → goods_receipt_notes`, `purchase_order_id → purchase_orders`, `gl_journal_id → gl_journal_headers`                                                                                                             |
+| `ar_invoices`                           | `customer_id → customers`, `shipment_id → shipments`, `sales_order_id → sales_orders`, `e_invoice_id → e_invoices`, `gl_journal_id → gl_journal_headers`                                                                                           |
+| `gl_journal_headers/lines`              | headers: `company_id`, `fiscal_period_id → fiscal_periods`, `posting_rule_id → gl_posting_rules`, `reverses_journal_id → gl_journal_headers` (self); lines: `journal_header_id`, `account_id → chart_of_accounts`, `cost_center_id → cost_centers` |
+| `tax_transactions`                      | `company_id`, `tax_code_id → tax_codes`, `gl_journal_line_id → gl_journal_lines`, polymorphic `source_document_type/id`                                                                                                                            |
+| `inventory_valuation_layers`            | `item_id`, `warehouse_id`, `receipt_ledger_id → inventory_ledger`                                                                                                                                                                                  |
 
 > **Polymorphic references** (`source_document_type` + `source_document_id`, used on
 > `inventory_ledger`, `gl_journal_headers`, `tax_transactions`, `warehouse_tasks`,
@@ -1378,14 +1388,14 @@ TABLE approval_requests                                             [Workflow]
 
 ### 6.4 Indexing Strategy (Backbone Tables)
 
-| Table | Indexes (beyond PK/unique) |
-|---|---|
-| `inventory_ledger` | `(company_id, item_id, warehouse_id, occurred_at)`, `(batch_id)`, `(serial_id)`, `(source_document_type, source_document_id)` — partitioned by month |
-| `gl_journal_lines` | `(account_id, journal_header_id)`, `(cost_center_id)` — partitioned by `journal_date` via parent header |
-| `purchase_orders` / `sales_orders` | `(company_id, status, order_date)`, `(supplier_id / customer_id, status)` |
-| `items` | `(company_id, category_id)`, trigram index on `name` for search |
-| `inventory_balances` | `(warehouse_id, item_id)` for ATP lookups; partial index `WHERE quantity_available > 0` |
-| `audit_logs` | `(tenant_id, entity_type, entity_id, occurred_at)` — partitioned by month, retained per tenant policy |
+| Table                              | Indexes (beyond PK/unique)                                                                                                                           |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inventory_ledger`                 | `(company_id, item_id, warehouse_id, occurred_at)`, `(batch_id)`, `(serial_id)`, `(source_document_type, source_document_id)` — partitioned by month |
+| `gl_journal_lines`                 | `(account_id, journal_header_id)`, `(cost_center_id)` — partitioned by `journal_date` via parent header                                              |
+| `purchase_orders` / `sales_orders` | `(company_id, status, order_date)`, `(supplier_id / customer_id, status)`                                                                            |
+| `items`                            | `(company_id, category_id)`, trigram index on `name` for search                                                                                      |
+| `inventory_balances`               | `(warehouse_id, item_id)` for ATP lookups; partial index `WHERE quantity_available > 0`                                                              |
+| `audit_logs`                       | `(tenant_id, entity_type, entity_id, occurred_at)` — partitioned by month, retained per tenant policy                                                |
 
 ---
 
@@ -1409,21 +1419,21 @@ code.** Instead:
 
 This makes the system **replayable** (rebuild any balance, at any point in time, by
 folding the ledger), **auditable** (every quantity is traceable to the exact event that
-produced it), and **AI-ready** (the ledger *is* the training-data event stream — no
+produced it), and **AI-ready** (the ledger _is_ the training-data event stream — no
 separate change-data-capture layer is needed).
 
 ### 7.2 Ledger Entry Anatomy
 
 Each `inventory_ledger` row answers six questions atomically:
 
-| Question | Column(s) |
-|---|---|
-| **What** moved | `item_id`, `quantity` (signed), `uom_id`, `batch_id` / `serial_id` |
-| **Where** it moved (from/to) | `warehouse_id`, `bin_id` (a transfer generates a paired `TRANSFER_OUT`/`TRANSFER_IN` row) |
-| **Why** it moved | `movement_type`, `reason_code` |
-| **At what cost** | `unit_cost`, `valuation_layer_id` |
-| **Because of what** | `source_document_type` + `source_document_id` + `source_line_id` (polymorphic link back to the GRN/Shipment/Transfer/Adjustment that caused it) |
-| **When / by whom** | `occurred_at`, `created_by`, monotonic `entry_no` |
+| Question                     | Column(s)                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **What** moved               | `item_id`, `quantity` (signed), `uom_id`, `batch_id` / `serial_id`                                                                              |
+| **Where** it moved (from/to) | `warehouse_id`, `bin_id` (a transfer generates a paired `TRANSFER_OUT`/`TRANSFER_IN` row)                                                       |
+| **Why** it moved             | `movement_type`, `reason_code`                                                                                                                  |
+| **At what cost**             | `unit_cost`, `valuation_layer_id`                                                                                                               |
+| **Because of what**          | `source_document_type` + `source_document_id` + `source_line_id` (polymorphic link back to the GRN/Shipment/Transfer/Adjustment that caused it) |
+| **When / by whom**           | `occurred_at`, `created_by`, monotonic `entry_no`                                                                                               |
 
 A single business transaction typically produces **multiple ledger rows**. For example,
 posting a Goods Receipt Note line generates exactly one `RECEIPT` row (positive quantity);
@@ -1448,17 +1458,16 @@ flowchart LR
 ```
 
 - **Write path**: A domain-service transaction inserts the ledger row(s) and, in the
-  *same database transaction*, applies the incremental delta to `inventory_balances`
+  _same database transaction_, applies the incremental delta to `inventory_balances`
   (`quantity_on_hand = quantity_on_hand + Δ`, advancing `last_ledger_entry_no`). This
   keeps the projection synchronous and consistent for the common case — no eventual-
   consistency window for the figure users see immediately after an action.
-- **Repair path**: A reconciliation job can fully rebuild any `(item, warehouse, bin,
-  batch)` balance row from scratch by replaying `inventory_ledger` from `entry_no = 0`
+- **Repair path**: A reconciliation job can fully rebuild any `(item, warehouse, bin, batch)` balance row from scratch by replaying `inventory_ledger` from `entry_no = 0`
   (or from the row's `last_ledger_entry_no` watermark forward, for incremental repair).
   This is the safety net for any projection drift (bugs, partial failures, manual data
   fixes) — **the ledger is always authoritative; the balance table can always be thrown
   away and rebuilt.**
-- **Reservations** (`inventory_reservations`) are modeled as a *separate* soft-allocation
+- **Reservations** (`inventory_reservations`) are modeled as a _separate_ soft-allocation
   layer, not as negative ledger entries — reserving stock for a sales order does not
   move physical inventory. `quantity_available = quantity_on_hand - quantity_reserved`
   is a generated column, giving Available-to-Promise (ATP) without ledger noise.
@@ -1475,7 +1484,7 @@ Reversal:   entry_no=4902  ADJUSTMENT_NEGATIVE  qty=-450  reverses_entry_id=4821
 ```
 
 The net effect on `inventory_balances` is correct (500 − 450 = 50), and the audit trail
-preserves *both* the original mistake and its correction — exactly what auditors,
+preserves _both_ the original mistake and its correction — exactly what auditors,
 compliance reviews, and ML anomaly-detection models need to see.
 
 ### 7.5 Valuation: Cost Layers Behind the Ledger
@@ -1485,11 +1494,10 @@ compliance reviews, and ML anomaly-detection models need to see.
 - **FIFO/LIFO items**: each `RECEIPT` creates a new layer with `original_quantity` =
   `remaining_quantity` = received qty at `unit_cost`. Each `ISSUE` consumes
   `remaining_quantity` from the oldest (FIFO) or newest (LIFO) open layer(s) for that
-  `(item, warehouse)`, recording the *blended* consumed cost on the ledger row(s) — an
+  `(item, warehouse)`, recording the _blended_ consumed cost on the ledger row(s) — an
   issue spanning two layers produces two ledger rows, each referencing its own layer.
 - **Weighted-average items**: a single rolling layer per `(item, warehouse)` is
-  recomputed on each receipt: `new_avg = (old_qty × old_avg + recv_qty × recv_cost) /
-  (old_qty + recv_qty)`.
+  recomputed on each receipt: `new_avg = (old_qty × old_avg + recv_qty × recv_cost) / (old_qty + recv_qty)`.
 
 This cost trail is what feeds **COGS** postings to the General Ledger (§8.3) — the
 inventory ledger and the GL are linked at the layer/row level, not just at a
@@ -1538,18 +1546,18 @@ posting engine evaluates when a triggering event occurs. This lets each tenant c
 their own Chart of Accounts mapping (e.g., separate revenue accounts per item category,
 or separate COGS accounts per warehouse) without code changes.
 
-| Event Code | Typical Debit | Typical Credit | Triggered By |
-|---|---|---|---|
-| `GRN_POSTED` | Inventory (Asset) | GR/IR Clearing | Goods Receipt Note posted |
-| `AP_INVOICE_MATCHED` | GR/IR Clearing + Input Tax | Accounts Payable | 3-way match completed |
-| `AP_PAYMENT_ISSUED` | Accounts Payable | Bank / Cash | AP payment cleared |
-| `AR_INVOICE_ISSUED` | Accounts Receivable | Revenue + Output Tax Payable | AR invoice issued |
-| `COGS_ON_SHIPMENT` | Cost of Goods Sold | Inventory (Asset) | Shipment posted (uses valuation-layer cost, §7.5) |
-| `AR_RECEIPT_CLEARED` | Bank / Cash | Accounts Receivable | Customer receipt cleared |
-| `INVENTORY_ADJUSTMENT_POSITIVE` | Inventory (Asset) | Inventory Gain/Loss | Stock adjustment (found stock) approved |
-| `INVENTORY_ADJUSTMENT_NEGATIVE` | Inventory Gain/Loss | Inventory (Asset) | Stock adjustment (write-off) approved |
-| `TAX_COLLECTED` | (component of AR invoice journal) | Output Tax Payable (per `tax_rates.gl_account_id`) | Tax transaction computed |
-| `TAX_PAID` | Input Tax Credit | (component of AP invoice journal) | Tax transaction computed on purchase |
+| Event Code                      | Typical Debit                     | Typical Credit                                     | Triggered By                                      |
+| ------------------------------- | --------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
+| `GRN_POSTED`                    | Inventory (Asset)                 | GR/IR Clearing                                     | Goods Receipt Note posted                         |
+| `AP_INVOICE_MATCHED`            | GR/IR Clearing + Input Tax        | Accounts Payable                                   | 3-way match completed                             |
+| `AP_PAYMENT_ISSUED`             | Accounts Payable                  | Bank / Cash                                        | AP payment cleared                                |
+| `AR_INVOICE_ISSUED`             | Accounts Receivable               | Revenue + Output Tax Payable                       | AR invoice issued                                 |
+| `COGS_ON_SHIPMENT`              | Cost of Goods Sold                | Inventory (Asset)                                  | Shipment posted (uses valuation-layer cost, §7.5) |
+| `AR_RECEIPT_CLEARED`            | Bank / Cash                       | Accounts Receivable                                | Customer receipt cleared                          |
+| `INVENTORY_ADJUSTMENT_POSITIVE` | Inventory (Asset)                 | Inventory Gain/Loss                                | Stock adjustment (found stock) approved           |
+| `INVENTORY_ADJUSTMENT_NEGATIVE` | Inventory Gain/Loss               | Inventory (Asset)                                  | Stock adjustment (write-off) approved             |
+| `TAX_COLLECTED`                 | (component of AR invoice journal) | Output Tax Payable (per `tax_rates.gl_account_id`) | Tax transaction computed                          |
+| `TAX_PAID`                      | Input Tax Credit                  | (component of AP invoice journal)                  | Tax transaction computed on purchase              |
 
 ### 8.3 End-to-End Posting Flow — Procure-to-Pay Example
 
@@ -1598,7 +1606,7 @@ application bugs and direct data manipulation.
 ### 8.5 Reversals, Not Edits — Same Discipline as the Inventory Ledger
 
 Posted journals are never updated. A correction creates a new journal with debits and
-credits *swapped* relative to the original, linked via `reverses_journal_id`, dated
+credits _swapped_ relative to the original, linked via `reverses_journal_id`, dated
 either in the original period (if still open) or the current period (if the original is
 closed) — standard "reversing entry" accounting practice, made structurally explicit in
 the schema rather than left to operator discipline.
@@ -1673,8 +1681,8 @@ sequenceDiagram
 
 Key design choices:
 
-- **Suggested vs. scanned location reconciliation**: the system *suggests* a bin
-  (`to_bin_id`), but the ledger entry always records the *scanned* bin — physical
+- **Suggested vs. scanned location reconciliation**: the system _suggests_ a bin
+  (`to_bin_id`), but the ledger entry always records the _scanned_ bin — physical
   reality wins, and a mismatch is logged as an exception event for supervisor review
   (and as a training signal for the putaway-recommendation model, §15).
 - **Symbology support**: Code-128 / GS1-128 (cartons, pallets — supports embedded
@@ -1718,13 +1726,13 @@ ledger entries and corresponding GL journals (§8.2).
 
 ### 10.1 Why Both Models Exist
 
-| | Batch/Lot Tracking | Serial Number Tracking |
-|---|---|---|
-| Granularity | A produced/received *lot* of N units sharing attributes (mfg date, expiry, supplier lot) | Each individual unit has a unique, persistent identity |
-| Typical use | Food, pharma, chemicals, raw materials — anything with expiry/recall requirements | Electronics, equipment, high-value assets, warranty-tracked goods |
-| Ledger linkage | `inventory_ledger.batch_id → inventory_batches` | `inventory_ledger.serial_id → inventory_serials` |
-| Quantity per ledger row | Can be > 1 (whole batch quantities move together) | Always 1 (a serial is indivisible) |
-| Lifecycle table | `inventory_batches` — batch is the unit of quarantine/recall | `inventory_serials` — serial carries its own current-location/status (no separate balance projection needed; the serial *is* the balance) |
+|                         | Batch/Lot Tracking                                                                       | Serial Number Tracking                                                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Granularity             | A produced/received _lot_ of N units sharing attributes (mfg date, expiry, supplier lot) | Each individual unit has a unique, persistent identity                                                                                    |
+| Typical use             | Food, pharma, chemicals, raw materials — anything with expiry/recall requirements        | Electronics, equipment, high-value assets, warranty-tracked goods                                                                         |
+| Ledger linkage          | `inventory_ledger.batch_id → inventory_batches`                                          | `inventory_ledger.serial_id → inventory_serials`                                                                                          |
+| Quantity per ledger row | Can be > 1 (whole batch quantities move together)                                        | Always 1 (a serial is indivisible)                                                                                                        |
+| Lifecycle table         | `inventory_batches` — batch is the unit of quarantine/recall                             | `inventory_serials` — serial carries its own current-location/status (no separate balance projection needed; the serial _is_ the balance) |
 
 `items.is_batch_tracked` / `items.is_serial_tracked` are mutually exclusive flags that
 gate which path the receiving and shipping workflows take for that item — the schema
@@ -1824,7 +1832,7 @@ tax_codes (e.g. "GST18")
 A single `tax_code` can therefore represent a **compound, multi-component** tax
 (`is_compound`), and each component posts to its own GL account — which is what makes
 statutory reports (which must show CGST/SGST/IGST separately) and the GL trial balance
-(which must show the same split) derive from the *same* underlying `tax_transactions`
+(which must show the same split) derive from the _same_ underlying `tax_transactions`
 rows rather than two independently-maintained representations.
 
 ### 11.2 Tax Determination Flow
@@ -1850,11 +1858,11 @@ the configured rate changes going forward.
 
 ### 11.3 E-Invoicing & E-Way Bill Compliance
 
-| Table | Role |
-|---|---|
-| `e_invoices` | Stores the Invoice Reference Number (IRN), QR code payload, and acknowledgment returned by the government Invoice Registration Portal (IRP) for each qualifying `ar_invoices` row |
-| `e_way_bills` | Stores e-way bill numbers and validity windows for shipments crossing the statutory value/distance thresholds, linked to `shipments` |
-| `gst_returns` | Stores periodic return-filing batches (e.g., GSTR-1 outward-supply statements, GSTR-3B summary returns) aggregated from `tax_transactions` for the filing period |
+| Table         | Role                                                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e_invoices`  | Stores the Invoice Reference Number (IRN), QR code payload, and acknowledgment returned by the government Invoice Registration Portal (IRP) for each qualifying `ar_invoices` row |
+| `e_way_bills` | Stores e-way bill numbers and validity windows for shipments crossing the statutory value/distance thresholds, linked to `shipments`                                              |
+| `gst_returns` | Stores periodic return-filing batches (e.g., GSTR-1 outward-supply statements, GSTR-3B summary returns) aggregated from `tax_transactions` for the filing period                  |
 
 The flow for an outbound invoice:
 
@@ -1907,7 +1915,7 @@ such tenants — no schema branching required, only configuration.
 An ERP/SCM platform's authorization model is not a generic "who can click this button"
 concern — it is the **primary structural control against financial fraud and inventory
 shrinkage**. The single most common failure mode in mid-market ERP deployments is not a
-broken permission check; it is a *correctly enforced* permission model that nonetheless
+broken permission check; it is a _correctly enforced_ permission model that nonetheless
 lets one person create a vendor, raise a purchase order, approve it, receive the goods,
 approve the invoice, and release the payment — end to end, alone. Any RBAC design for
 Aivora has to be judged primarily on whether it can prevent, detect, and prove the
@@ -1915,14 +1923,14 @@ absence of exactly that scenario, not merely on whether it can hide a menu item.
 
 Three well-known authorization paradigms were evaluated against this bar:
 
-| Dimension | Pure RBAC | Pure ABAC | ReBAC (Zanzibar-style graph) | **Hybrid (chosen)** |
-|---|---|---|---|---|
-| "Who can approve POs over ₹50,000?" — answerable by an auditor in one query | ✅ enumerable role → permission join | ❌ requires simulating policy code against every attribute combination | ⚠️ requires a graph traversal across relation tuples | ✅ enumerable role/permission join, with the *condition* visible inline as data (`condition_expr`) |
-| Expresses dynamic, value-based conditions (amount thresholds, item categories, time windows) | ❌ forces **role explosion** — "PO Approver ≤50K," "PO Approver ≤2L," "PO Approver — Electronics only," … combinatorially | ✅ native — this is ABAC's whole reason to exist | ⚠️ awkward; relations aren't naturally value-bearing | ✅ native, via a small JSONB **overlay** on top of role grants — no new paradigm to learn |
-| Models the org hierarchy (tenant → company → branch → warehouse) that drives 90% of Aivora's scoping needs | ✅ a natural fit — this *is* what scoped role assignment does | ⚠️ requires hierarchy-walking policy logic for every check | ✅ natural fit, but at the cost of standing up dedicated graph infrastructure | ✅ natural fit — reuses the same scoped-assignment mechanism RBAC already provides |
-| First-class **fraud / Segregation-of-Duties** modeling | ❌ not a concept in the model at all | ❌ not a concept in the model at all | ❌ not a concept in the model at all | ✅ purpose-built engine (§12.6) — this is the deciding factor for an ERP |
-| Operational cost (build, test, explain to auditors, onboard new admins) | Low | High — policies are code; testing them is a software project in itself | Very high — requires a dedicated relationship-graph service and a new mental model | Moderate — one familiar role model, two narrowly-scoped overlays |
-| Precedent in mature ERPs | Partial (most ERPs *start* here and outgrow it) | Rare as the primary model | Not used by ERP vendors | **This is what SAP (authorization objects + field values), Oracle Fusion (role-based + data security policies), and Microsoft Dynamics 365 (duties/privileges + business-event rules) all converge on** — independently arriving at the same hybrid shape |
+| Dimension                                                                                                  | Pure RBAC                                                                                                                 | Pure ABAC                                                              | ReBAC (Zanzibar-style graph)                                                       | **Hybrid (chosen)**                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Who can approve POs over ₹50,000?" — answerable by an auditor in one query                                | ✅ enumerable role → permission join                                                                                      | ❌ requires simulating policy code against every attribute combination | ⚠️ requires a graph traversal across relation tuples                               | ✅ enumerable role/permission join, with the _condition_ visible inline as data (`condition_expr`)                                                                                                                                                        |
+| Expresses dynamic, value-based conditions (amount thresholds, item categories, time windows)               | ❌ forces **role explosion** — "PO Approver ≤50K," "PO Approver ≤2L," "PO Approver — Electronics only," … combinatorially | ✅ native — this is ABAC's whole reason to exist                       | ⚠️ awkward; relations aren't naturally value-bearing                               | ✅ native, via a small JSONB **overlay** on top of role grants — no new paradigm to learn                                                                                                                                                                 |
+| Models the org hierarchy (tenant → company → branch → warehouse) that drives 90% of Aivora's scoping needs | ✅ a natural fit — this _is_ what scoped role assignment does                                                             | ⚠️ requires hierarchy-walking policy logic for every check             | ✅ natural fit, but at the cost of standing up dedicated graph infrastructure      | ✅ natural fit — reuses the same scoped-assignment mechanism RBAC already provides                                                                                                                                                                        |
+| First-class **fraud / Segregation-of-Duties** modeling                                                     | ❌ not a concept in the model at all                                                                                      | ❌ not a concept in the model at all                                   | ❌ not a concept in the model at all                                               | ✅ purpose-built engine (§12.6) — this is the deciding factor for an ERP                                                                                                                                                                                  |
+| Operational cost (build, test, explain to auditors, onboard new admins)                                    | Low                                                                                                                       | High — policies are code; testing them is a software project in itself | Very high — requires a dedicated relationship-graph service and a new mental model | Moderate — one familiar role model, two narrowly-scoped overlays                                                                                                                                                                                          |
+| Precedent in mature ERPs                                                                                   | Partial (most ERPs _start_ here and outgrow it)                                                                           | Rare as the primary model                                              | Not used by ERP vendors                                                            | **This is what SAP (authorization objects + field values), Oracle Fusion (role-based + data security policies), and Microsoft Dynamics 365 (duties/privileges + business-event rules) all converge on** — independently arriving at the same hybrid shape |
 
 **Decision: Aivora adopts Role-Based Access Control as the structural backbone**
 — because it is auditable, matches the org hierarchy, and is the model every ERP
@@ -1931,7 +1939,7 @@ top of it**:
 
 1. An **ABAC overlay** (`role_permissions.condition_expr`, §12.5) so a single role
    can carry value-based conditions ("approve POs up to ₹50,000," "only for
-   Electronics," "only outside business hours requires dual sign-off") *without*
+   Electronics," "only outside business hours requires dual sign-off") _without_
    spawning a new role for every threshold combination.
 2. A **Segregation-of-Duties engine** (`sod_conflict_rules` / `sod_violations`,
    §12.6) that makes "no one person can both create and approve a payment" a
@@ -1939,7 +1947,7 @@ top of it**:
    material.
 
 A pure-ABAC or pure-ReBAC rebuild was rejected specifically because it would trade
-a problem Aivora *can* solve cleanly (role explosion, via a small JSONB column) for
+a problem Aivora _can_ solve cleanly (role explosion, via a small JSONB column) for
 a problem it would then have to solve from scratch (auditability, fraud modeling)
 that the hybrid gets "for free" from RBAC's structure. **Time-boxed delegation**
 (§12.7) is added as a fifth, orthogonal layer because temporary role transfer
@@ -1972,13 +1980,13 @@ flowchart TD
     style DECISION fill:#d4edda
 ```
 
-| Layer | Mechanism | Owning schema | Solves |
-|---|---|---|---|
-| 1. Core RBAC | Named roles bundle atomic permissions; assignments are scoped to company/branch/warehouse | `roles`, `permissions`, `role_permissions`, `user_roles` | "Can this *kind* of user do this *kind* of action, in this *part* of the org?" — the 90% case, fully auditable as static data |
-| 2. Permission Scopes | A `scope` enum on each grant narrows data visibility independent of where the role is assigned | `role_permissions.scope` | "…and how much of the data can they see while doing it?" |
-| 3. ABAC Overlay | A `condition_expr` JSONB column attaches dynamic, value-based predicates to an *individual* grant | `role_permissions.condition_expr` | "…but only when the amount/category/time/requester satisfies X" — without multiplying roles |
-| 4. SoD Engine | Declared forbidden permission/role pairs are checked at assignment time (preventive) and by periodic scan (detective) | `sod_conflict_rules`, `sod_violations` | "…and does giving them this, combined with what they already have, create a fraud opportunity?" |
-| 5. Delegation | Time-boxed, approved transfer of a role's authority from one user to another | `role_delegations` | "…or are they exercising someone *else's* authority, and is that grant still within its valid window?" |
+| Layer                | Mechanism                                                                                                             | Owning schema                                            | Solves                                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1. Core RBAC         | Named roles bundle atomic permissions; assignments are scoped to company/branch/warehouse                             | `roles`, `permissions`, `role_permissions`, `user_roles` | "Can this _kind_ of user do this _kind_ of action, in this _part_ of the org?" — the 90% case, fully auditable as static data |
+| 2. Permission Scopes | A `scope` enum on each grant narrows data visibility independent of where the role is assigned                        | `role_permissions.scope`                                 | "…and how much of the data can they see while doing it?"                                                                      |
+| 3. ABAC Overlay      | A `condition_expr` JSONB column attaches dynamic, value-based predicates to an _individual_ grant                     | `role_permissions.condition_expr`                        | "…but only when the amount/category/time/requester satisfies X" — without multiplying roles                                   |
+| 4. SoD Engine        | Declared forbidden permission/role pairs are checked at assignment time (preventive) and by periodic scan (detective) | `sod_conflict_rules`, `sod_violations`                   | "…and does giving them this, combined with what they already have, create a fraud opportunity?"                               |
+| 5. Delegation        | Time-boxed, approved transfer of a role's authority from one user to another                                          | `role_delegations`                                       | "…or are they exercising someone _else's_ authority, and is that grant still within its valid window?"                        |
 
 ### 12.3 Layer 1 — Core RBAC: Roles, Permissions, and Scoped Assignment
 
@@ -2006,7 +2014,7 @@ erDiagram
   (platform-defined, non-editable, ship with sensible defaults) and **custom roles**
   (tenant-defined) are supported via `roles.is_system_role`.
 - **Assignments are scoped** (`user_roles.company_id` / `branch_id` / `warehouse_id`,
-  each nullable meaning "all"): a user can be a Warehouse Operator *only* for
+  each nullable meaning "all"): a user can be a Warehouse Operator _only_ for
   `DC-MUMBAI-01`, and simultaneously an AP Clerk for the whole company — multiple
   scoped role assignments compose into the user's effective permission set.
 - **Roles stay coarse on purpose.** The temptation in every RBAC rollout is to mint a
@@ -2020,13 +2028,13 @@ erDiagram
 `role_permissions.scope` adds a second dimension beyond the assignment scope —
 **data visibility within an action**:
 
-| Scope | Meaning | Example |
-|---|---|---|
-| `TENANT` | Action applies across the entire tenant | Platform Admin managing tenant settings |
-| `COMPANY` | Action applies within one legal entity | Controller closing books for Company A only |
-| `BRANCH` | Action applies within one business unit | Branch manager approving local POs |
-| `WAREHOUSE` | Action applies within one warehouse | Warehouse Operator scanning only at DC-MUMBAI-01 |
-| `OWN` | Action applies only to records the user created/owns | Sales rep viewing only their own quotations |
+| Scope       | Meaning                                              | Example                                          |
+| ----------- | ---------------------------------------------------- | ------------------------------------------------ |
+| `TENANT`    | Action applies across the entire tenant              | Platform Admin managing tenant settings          |
+| `COMPANY`   | Action applies within one legal entity               | Controller closing books for Company A only      |
+| `BRANCH`    | Action applies within one business unit              | Branch manager approving local POs               |
+| `WAREHOUSE` | Action applies within one warehouse                  | Warehouse Operator scanning only at DC-MUMBAI-01 |
+| `OWN`       | Action applies only to records the user created/owns | Sales rep viewing only their own quotations      |
 
 The **effective permission** for a request is the narrowest applicable scope granted —
 evaluated server-side, never trusted from the client.
@@ -2035,7 +2043,7 @@ evaluated server-side, never trusted from the client.
 
 This is where Aivora deliberately departs from textbook RBAC, and it is the single
 change that prevents the role catalog from exploding. Rather than encoding "approve
-purchase orders up to ₹50,000" as a *role*, the threshold is encoded as **data**
+purchase orders up to ₹50,000" as a _role_, the threshold is encoded as **data**
 attached to the grant:
 
 ```
@@ -2050,7 +2058,7 @@ role_permissions row:
                     }
 ```
 
-A **Controller** can hold the *same* permission, at `COMPANY` scope, with
+A **Controller** can hold the _same_ permission, at `COMPANY` scope, with
 `condition_expr: null` (unconditional — the textbook "escalation" case), and a
 **Regional Head** can hold it with `{"max_amount": 500000}`. Three roles, one
 permission code, zero duplicated authorization logic — the approval ladder is
@@ -2059,13 +2067,13 @@ expressed entirely as rows of data that a non-engineer admin can review and edit
 **Supported condition predicates** (evaluated server-side against live request
 context — never trusted from the client):
 
-| Key | Evaluated against | Example use |
-|---|---|---|
-| `max_amount` / `min_amount` | The transaction's monetary value | Tiered approval ladders (₹50K → ₹2L → ₹10L → unlimited) |
-| `item_categories` | `items.category_id` of the lines on the document | "Can approve stock write-offs, but only for the Perishables category" |
-| `time_window` | Server time at the moment of the request | "Out-of-hours GL postings require the Controller role, not just the AP Clerk" |
-| `exclude_if_requested_by_self` | Whether `requested_by = current_user` | The single most important predicate in the system — see §12.6, SOD-01 |
-| `warehouse_categories` / `branch_tags` | Tags on the scoping entity | "Only for warehouses tagged `bonded` " (customs-bonded stock) |
+| Key                                    | Evaluated against                                | Example use                                                                   |
+| -------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `max_amount` / `min_amount`            | The transaction's monetary value                 | Tiered approval ladders (₹50K → ₹2L → ₹10L → unlimited)                       |
+| `item_categories`                      | `items.category_id` of the lines on the document | "Can approve stock write-offs, but only for the Perishables category"         |
+| `time_window`                          | Server time at the moment of the request         | "Out-of-hours GL postings require the Controller role, not just the AP Clerk" |
+| `exclude_if_requested_by_self`         | Whether `requested_by = current_user`            | The single most important predicate in the system — see §12.6, SOD-01         |
+| `warehouse_categories` / `branch_tags` | Tags on the scoping entity                       | "Only for warehouses tagged `bonded` " (customs-bonded stock)                 |
 
 ```mermaid
 flowchart TD
@@ -2089,12 +2097,12 @@ second bespoke policy engine.
 
 ### 12.6 Layer 4 — Segregation of Duties (SoD) Engine
 
-If Layer 3 is what makes the model *expressive enough*, Layer 4 is what makes it
+If Layer 3 is what makes the model _expressive enough_, Layer 4 is what makes it
 **trustworthy enough for an ERP** — and it is the layer that has no equivalent in a
 textbook RBAC/ABAC/ReBAC comparison, because general-purpose authorization theory
 doesn't have a concept of "fraud." Finance and audit teams don't ask "can user X do
-Y?" — they ask **"can any single person do Y *and* Z, and if so, why haven't we
-stopped that?"** Aivora answers that question as a first-class, queryable, *enforced*
+Y?" — they ask **"can any single person do Y _and_ Z, and if so, why haven't we
+stopped that?"** Aivora answers that question as a first-class, queryable, _enforced_
 artifact rather than a policy document nobody re-reads after go-live.
 
 **Schema** (full DDL in §5.3):
@@ -2104,26 +2112,26 @@ artifact rather than a policy document nobody re-reads after go-live.
   scope, each with a `severity` (`HIGH` / `MEDIUM` / `LOW`) and a human-readable
   `description` an auditor can cite directly in a finding.
 - **`sod_violations`** — every detected conflict, with `status`
-  (`OPEN` → `WAIVED` *with a documented compensating control* → `REMEDIATED`),
+  (`OPEN` → `WAIVED` _with a documented compensating control_ → `REMEDIATED`),
   `resolved_by`, and `resolution_notes`. This table is the audit trail's audit trail:
-  it proves not just that conflicts are *detected*, but that every one of them was
-  *seen by a human and explicitly dispositioned*.
+  it proves not just that conflicts are _detected_, but that every one of them was
+  _seen by a human and explicitly dispositioned_.
 
 **Representative conflict matrix** (ships as system-defined rows; tenants may add
 their own):
 
-| Rule | Conflicting permissions / roles | Why it's dangerous | Severity |
-|---|---|---|---|
-| `SOD-01` | `procurement.purchase_order.create` **+** `procurement.purchase_order.approve` (same user) | Classic self-approval — raise a PO to a shell vendor and approve your own spend | HIGH |
-| `SOD-02` | `procurement.supplier.create_or_edit` **+** `procurement.purchase_order.approve` | Create a fictitious vendor, then approve POs to it — the #1 procurement fraud pattern | HIGH |
-| `SOD-03` | `inventory.grn.approve` **+** `finance.ap_invoice.approve` | Collusion to confirm receipt of goods that were never delivered, then pay for them | HIGH |
-| `SOD-04` | `finance.ap_invoice.create` **+** `finance.payment.approve` | Invoice the company, then approve your own payment run | HIGH |
-| `SOD-05` | `finance.payment.create` **+** `finance.payment.approve` | Violates the maker-checker principle that is non-negotiable for any cash movement | HIGH |
-| `SOD-06` | `sales.credit_limit.override` **+** `sales.sales_order.approve` | Wave through an order to a customer already over their approved credit exposure | MEDIUM |
-| `SOD-07` | `inventory.write_off.create` **+** `inventory.write_off.approve` | Self-approve inventory write-offs — the standard mechanism for concealing shrinkage/theft | HIGH |
-| `SOD-08` | `finance.gl_journal.create_manual` **+** `finance.gl_journal.post` (without a third-party reviewer) | Manual journal entries bypass the system-generated posting rules (§8.2) — the highest-risk GL surface, must always be maker-checker | HIGH |
-| `SOD-09` | `security.role.assign` **+** *holds any HIGH-severity permission above* | Privilege self-escalation — granting yourself (or a confederate) the very access this matrix exists to constrain | HIGH |
-| `SOD-10` | `finance.bank_reconciliation.perform` **+** `finance.bank_statement.upload` | Upload a doctored statement, then "reconcile" against it — classic concealment of skimmed cash | MEDIUM |
+| Rule     | Conflicting permissions / roles                                                                     | Why it's dangerous                                                                                                                  | Severity |
+| -------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `SOD-01` | `procurement.purchase_order.create` **+** `procurement.purchase_order.approve` (same user)          | Classic self-approval — raise a PO to a shell vendor and approve your own spend                                                     | HIGH     |
+| `SOD-02` | `procurement.supplier.create_or_edit` **+** `procurement.purchase_order.approve`                    | Create a fictitious vendor, then approve POs to it — the #1 procurement fraud pattern                                               | HIGH     |
+| `SOD-03` | `inventory.grn.approve` **+** `finance.ap_invoice.approve`                                          | Collusion to confirm receipt of goods that were never delivered, then pay for them                                                  | HIGH     |
+| `SOD-04` | `finance.ap_invoice.create` **+** `finance.payment.approve`                                         | Invoice the company, then approve your own payment run                                                                              | HIGH     |
+| `SOD-05` | `finance.payment.create` **+** `finance.payment.approve`                                            | Violates the maker-checker principle that is non-negotiable for any cash movement                                                   | HIGH     |
+| `SOD-06` | `sales.credit_limit.override` **+** `sales.sales_order.approve`                                     | Wave through an order to a customer already over their approved credit exposure                                                     | MEDIUM   |
+| `SOD-07` | `inventory.write_off.create` **+** `inventory.write_off.approve`                                    | Self-approve inventory write-offs — the standard mechanism for concealing shrinkage/theft                                           | HIGH     |
+| `SOD-08` | `finance.gl_journal.create_manual` **+** `finance.gl_journal.post` (without a third-party reviewer) | Manual journal entries bypass the system-generated posting rules (§8.2) — the highest-risk GL surface, must always be maker-checker | HIGH     |
+| `SOD-09` | `security.role.assign` **+** _holds any HIGH-severity permission above_                             | Privilege self-escalation — granting yourself (or a confederate) the very access this matrix exists to constrain                    | HIGH     |
+| `SOD-10` | `finance.bank_reconciliation.perform` **+** `finance.bank_statement.upload`                         | Upload a doctored statement, then "reconcile" against it — classic concealment of skimmed cash                                      | MEDIUM   |
 
 **Enforcement is two-layered, matching how real audits work:**
 
@@ -2155,7 +2163,7 @@ sequenceDiagram
     SOD-->>A: Surface OPEN violations on the\nCompliance dashboard for disposition
 ```
 
-The preventive check stops the *easy* 90% of violations — the moment someone tries
+The preventive check stops the _easy_ 90% of violations — the moment someone tries
 to assign a conflicting role. The detective sweep exists because real systems drift:
 permissions get added to an existing role months later, bulk CSV imports bypass the
 UI, or a tenant migrates legacy data with pre-existing conflicts. **Every `OPEN`
@@ -2164,7 +2172,7 @@ actions additionally require the Regional Controller's co-sign, logged in
 `audit_logs`") or `REMEDIATED`** — an unresolved HIGH-severity violation is surfaced
 on the Controller's and the tenant admin's dashboards and cannot be silently dismissed.
 This converts "we have a segregation-of-duties policy" from a sentence in an onboarding
-deck into a number — *open HIGH violations: 0* — that a SOX or ISO 27001 auditor can
+deck into a number — _open HIGH violations: 0_ — that a SOX or ISO 27001 auditor can
 verify by querying the database directly.
 
 ### 12.7 Layer 5 — Delegation & Temporal Access
@@ -2174,7 +2182,7 @@ Manager who is the sole holder of `procurement.purchase_order.approve` for
 `DC-PUNE-02` goes on two weeks' leave, and the business cannot simply stop approving
 purchase orders. The undocumented, un-audited workaround — "just give Rohan my
 password until I'm back" — is precisely how SoD violations and orphaned access
-actually enter real systems. Aivora makes the *legitimate* version of this
+actually enter real systems. Aivora makes the _legitimate_ version of this
 first-class, time-boxed, and fully audited via `role_delegations` (full DDL in §5.3:
 `delegator_user_id`, `delegate_user_id`, `role_id`, optional
 `scope_company_id`/`scope_warehouse_id`, `valid_from`, `valid_until`, `status`,
@@ -2196,14 +2204,13 @@ stateDiagram-v2
 
 Three properties make this safe rather than merely convenient:
 
-- **The SoD engine runs again, against the *delegate*.** Transferring
+- **The SoD engine runs again, against the _delegate_.** Transferring
   `finance.payment.approve` to someone who already holds
   `finance.payment.create` would recreate `SOD-05` in a different person — the
   same preventive check from §12.6 fires at delegation-approval time, not just at
   direct role assignment.
 - **Expiry is structural, not procedural.** `valid_until` is enforced in the
-  effective-permission resolution query itself (`WHERE status = 'ACTIVE' AND now()
-  BETWEEN valid_from AND valid_until`) — there is no "remember to revoke this on
+  effective-permission resolution query itself (`WHERE status = 'ACTIVE' AND now() BETWEEN valid_from AND valid_until`) — there is no "remember to revoke this on
   Friday" step for an admin to forget. A delegation that nobody remembered to close
   out simply stops working the moment its window ends.
 - **Every action taken under delegation is doubly attributed.** `audit_logs`
@@ -2244,14 +2251,14 @@ flowchart TD
 Two design choices are deliberate and worth calling out:
 
 - **Every branch — allowed, denied, or blocked — writes to `audit_logs`.** A
-  *denied* attempt to approve one's own purchase order is, from a fraud-detection
+  _denied_ attempt to approve one's own purchase order is, from a fraud-detection
   standpoint, at least as interesting as a successful one. Logging only successes
   (the common shortcut) would blind the anomaly-detection service (§15.4 / §12.11)
   to exactly the probing behavior it most needs to see.
-- **The SoD check (Layer 4) runs *after* the grant is otherwise confirmed valid**,
+- **The SoD check (Layer 4) runs _after_ the grant is otherwise confirmed valid**,
   not before. This ordering means a user without the underlying permission gets a
   clean, generic `403` (revealing nothing about the conflict matrix to an
-  unauthorized caller), while a user who *does* have the permission but would
+  unauthorized caller), while a user who _does_ have the permission but would
   complete a forbidden combination gets a specific, auditable `409` — the
   distinction itself is a small but real piece of defense-in-depth.
 
@@ -2320,7 +2327,7 @@ right:
   `DENIED` / `BLOCKED_SOD`), and — when applicable — the `acting_as_delegation_id`
   (§12.7) under which it was performed. Together these enable point-in-time
   reconstruction not just of "what did this record look like before this user changed
-  it," but of "*by what authority* were they allowed to change it at all" — which is
+  it," but of "_by what authority_ were they allowed to change it at all" — which is
   the exact sequence of questions a security incident review and a compliance audit
   ask, in that order.
 - `login_history`, `audit_logs`, and `sod_violations` together feed the
@@ -2328,8 +2335,7 @@ right:
   exporting large datasets, repeatedly attempting actions that get `BLOCKED_SOD`, or
   approving an unusual volume of their own prior requests just before a delegation
   expires) are correlated and flagged for review automatically, closing the loop from
-  *declared* policy (§12.6's matrix) to *observed* behavior.
-
+  _declared_ policy (§12.6's matrix) to _observed_ behavior.
 
 ---
 
@@ -2416,15 +2422,15 @@ such bypass is itself logged.
 
 Everything a tenant needs to customize is **data, not code**:
 
-| Configurable Aspect | Mechanism |
-|---|---|
-| Branding, locale, currency defaults | `tenant_settings` (key/value) |
-| Chart of Accounts & posting rules | `chart_of_accounts`, `gl_posting_rules` per `company_id` |
-| Document numbering formats | `number_sequences` per `company_id` / document type |
-| Tax codes & rates | `tax_codes`, `tax_rates` per `company_id` |
-| Roles & permission bundles | Custom `roles` (alongside system roles) per `tenant_id` |
-| Approval workflows | `approval_workflows` / `approval_steps` per `company_id` |
-| Warehouse topology | `warehouses` → `warehouse_zones` → ... → `warehouse_bins` |
+| Configurable Aspect                 | Mechanism                                                 |
+| ----------------------------------- | --------------------------------------------------------- |
+| Branding, locale, currency defaults | `tenant_settings` (key/value)                             |
+| Chart of Accounts & posting rules   | `chart_of_accounts`, `gl_posting_rules` per `company_id`  |
+| Document numbering formats          | `number_sequences` per `company_id` / document type       |
+| Tax codes & rates                   | `tax_codes`, `tax_rates` per `company_id`                 |
+| Roles & permission bundles          | Custom `roles` (alongside system roles) per `tenant_id`   |
+| Approval workflows                  | `approval_workflows` / `approval_steps` per `company_id`  |
+| Warehouse topology                  | `warehouses` → `warehouse_zones` → ... → `warehouse_bins` |
 
 New tenants are provisioned by cloning a **starter configuration template** (default
 Chart of Accounts, common tax codes for their selected region, standard roles) — reducing
@@ -2483,16 +2489,16 @@ External Callers                         API Surface                          In
 
 ### 14.2 Cross-Cutting Concerns at the Gateway
 
-| Concern | Implementation |
-|---|---|
-| AuthN | OIDC/JWT bearer tokens; API keys for M2M (§12.9) |
-| AuthZ | Permission-code resolution per endpoint + RLS session variables (§12, §13.3) |
-| Tenant resolution | Subdomain/custom-domain/claim-based routing to the correct connection pool (§13.1) |
-| Rate limiting & quotas | Per-tenant, per-API-key, plan-based (`tenant_subscriptions`) |
-| Idempotency | `Idempotency-Key` header required on all POST/PATCH mutating endpoints — critical for offline-sync scanner submissions and retried payment/posting calls |
-| Validation | JSON Schema / class-validator DTOs at the boundary; domain invariants enforced in service layer (e.g., "GL journal must balance" is *not* a DTO-level check) |
-| Versioning | URL-path versioning (`/v1`, `/v2`); additive changes preferred; breaking changes ship as new major versions with a published deprecation timeline |
-| Observability | Correlation IDs propagated end-to-end; structured logs; traces span gateway → service → DB → event publish |
+| Concern                | Implementation                                                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AuthN                  | OIDC/JWT bearer tokens; API keys for M2M (§12.9)                                                                                                             |
+| AuthZ                  | Permission-code resolution per endpoint + RLS session variables (§12, §13.3)                                                                                 |
+| Tenant resolution      | Subdomain/custom-domain/claim-based routing to the correct connection pool (§13.1)                                                                           |
+| Rate limiting & quotas | Per-tenant, per-API-key, plan-based (`tenant_subscriptions`)                                                                                                 |
+| Idempotency            | `Idempotency-Key` header required on all POST/PATCH mutating endpoints — critical for offline-sync scanner submissions and retried payment/posting calls     |
+| Validation             | JSON Schema / class-validator DTOs at the boundary; domain invariants enforced in service layer (e.g., "GL journal must balance" is _not_ a DTO-level check) |
+| Versioning             | URL-path versioning (`/v1`, `/v2`); additive changes preferred; breaking changes ship as new major versions with a published deprecation timeline            |
+| Observability          | Correlation IDs propagated end-to-end; structured logs; traces span gateway → service → DB → event publish                                                   |
 
 ### 14.3 Representative Endpoint Groups
 
@@ -2520,11 +2526,11 @@ External Callers                         API Surface                          In
 
 - **EDI / Partner Integration**: inbound EDI documents (POs, ASNs, invoices in X12/EDIFACT
   or partner-specific JSON) land in a staging layer, are mapped to internal DTOs by
-  configurable transformation rules, and flow through the *same* domain services and
+  configurable transformation rules, and flow through the _same_ domain services and
   validation as UI-originated transactions — guaranteeing one consistent rule set
   regardless of entry channel.
 - **AI Service Integration**: AI/ML services (§15) are treated as first-class API
-  consumers *and* producers — they read via the governed read-replica/event-stream
+  consumers _and_ producers — they read via the governed read-replica/event-stream
   surface and write recommendations back via `POST /api/v1/ai/recommendations`, which
   routes through the same RBAC/audit/workflow machinery as a human-entered suggestion
   (an `ai_recommendations` row can itself be subject to an `approval_requests` workflow
@@ -2577,22 +2583,22 @@ turns this from "a model that runs once" into a **continuously-improving system*
 
 ### 15.2 Phased Roadmap
 
-| Phase | Capability | Data Inputs | Output | Target Tables |
-|---|---|---|---|---|
-| **Phase 1 — Foundation** (0–6 mo) | Governed data exports, BI dashboards, rule-based reorder alerts | `inventory_balances`, `inventory_ledger`, `sales_order_lines` | Threshold-based alerts; analyst dashboards | `saved_reports`, `dashboards` |
-| **Phase 2 — Demand Forecasting** (6–12 mo) | Item/warehouse-level demand forecasts (statistical + ML: Prophet/ARIMA → gradient-boosted/temporal models) | Historical `inventory_ledger` ISSUE events, `sales_order_lines`, seasonality, promotions, external signals (holidays, weather feeds) | Forecasted demand with confidence bands | `ai_forecasts`, `ai_model_runs` |
-| **Phase 3 — AI Procurement Recommendations** (12–18 mo) | Reorder quantity/timing suggestions; supplier selection scoring | `ai_forecasts`, `supplier_items` (cost/lead-time), `supplier_ratings`, open `purchase_orders` | Suggested POs with rationale & confidence | `ai_recommendations` (`type = REORDER` / `SUPPLIER_SWITCH`) |
-| **Phase 4 — Replenishment Engine** (18–24 mo) | Closed-loop, policy-driven auto-replenishment (min/max, EOQ, multi-echelon) with human-in-the-loop guardrails | Phase 2/3 outputs, `inventory_balances`, lead-time variability | Auto-generated `purchase_requisitions` / inter-warehouse `stock_transfers`, gated by `approval_requests` for amounts above policy thresholds | `ai_recommendations`, `purchase_requisitions`, `stock_transfers` |
-| **Phase 5 — Anomaly & Fraud Detection** (parallel track) | Detect unusual ledger/GL/access patterns (shrinkage, mis-posting, privilege misuse, fictitious vendors) | `inventory_ledger` reversal patterns, `gl_journal_headers` reversal/manual-entry rates, `audit_logs`, `login_history` | Flagged exception queue with explainable rationale | `ai_recommendations` (`type` extended with `ANOMALY_FLAG`), `audit_logs` |
-| **Phase 6 — Pricing & Slow-Mover Intelligence** | Dynamic price suggestions, clearance recommendations for aging/slow-moving stock | `inventory_balances` aging, `inventory_valuation_layers`, `price_lists`, margin data from GL | Price-adjustment / clearance suggestions | `ai_recommendations` (`PRICE_ADJUST`, `SLOW_MOVER_CLEARANCE`) |
-| **Phase 7 — Logistics & Route Optimization** | Pick-path refinement, load building, delivery route optimization | `warehouse_tasks` scan-time data, `shipments`, carrier performance | Optimized pick sequences & routes | `ai_recommendations` (`ROUTE_OPTIMIZATION`), `pick_lists` |
-| **Phase 8 — Conversational / Agentic Interfaces** | Natural-language query over governed data; agentic workflows ("find slow movers in Mumbai DC and draft clearance POs") | All of the above via the governed API surface (§14) | Conversational answers; draft documents routed through normal approval workflows | All — via API, never direct DB access |
+| Phase                                                    | Capability                                                                                                             | Data Inputs                                                                                                                          | Output                                                                                                                                       | Target Tables                                                            |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Phase 1 — Foundation** (0–6 mo)                        | Governed data exports, BI dashboards, rule-based reorder alerts                                                        | `inventory_balances`, `inventory_ledger`, `sales_order_lines`                                                                        | Threshold-based alerts; analyst dashboards                                                                                                   | `saved_reports`, `dashboards`                                            |
+| **Phase 2 — Demand Forecasting** (6–12 mo)               | Item/warehouse-level demand forecasts (statistical + ML: Prophet/ARIMA → gradient-boosted/temporal models)             | Historical `inventory_ledger` ISSUE events, `sales_order_lines`, seasonality, promotions, external signals (holidays, weather feeds) | Forecasted demand with confidence bands                                                                                                      | `ai_forecasts`, `ai_model_runs`                                          |
+| **Phase 3 — AI Procurement Recommendations** (12–18 mo)  | Reorder quantity/timing suggestions; supplier selection scoring                                                        | `ai_forecasts`, `supplier_items` (cost/lead-time), `supplier_ratings`, open `purchase_orders`                                        | Suggested POs with rationale & confidence                                                                                                    | `ai_recommendations` (`type = REORDER` / `SUPPLIER_SWITCH`)              |
+| **Phase 4 — Replenishment Engine** (18–24 mo)            | Closed-loop, policy-driven auto-replenishment (min/max, EOQ, multi-echelon) with human-in-the-loop guardrails          | Phase 2/3 outputs, `inventory_balances`, lead-time variability                                                                       | Auto-generated `purchase_requisitions` / inter-warehouse `stock_transfers`, gated by `approval_requests` for amounts above policy thresholds | `ai_recommendations`, `purchase_requisitions`, `stock_transfers`         |
+| **Phase 5 — Anomaly & Fraud Detection** (parallel track) | Detect unusual ledger/GL/access patterns (shrinkage, mis-posting, privilege misuse, fictitious vendors)                | `inventory_ledger` reversal patterns, `gl_journal_headers` reversal/manual-entry rates, `audit_logs`, `login_history`                | Flagged exception queue with explainable rationale                                                                                           | `ai_recommendations` (`type` extended with `ANOMALY_FLAG`), `audit_logs` |
+| **Phase 6 — Pricing & Slow-Mover Intelligence**          | Dynamic price suggestions, clearance recommendations for aging/slow-moving stock                                       | `inventory_balances` aging, `inventory_valuation_layers`, `price_lists`, margin data from GL                                         | Price-adjustment / clearance suggestions                                                                                                     | `ai_recommendations` (`PRICE_ADJUST`, `SLOW_MOVER_CLEARANCE`)            |
+| **Phase 7 — Logistics & Route Optimization**             | Pick-path refinement, load building, delivery route optimization                                                       | `warehouse_tasks` scan-time data, `shipments`, carrier performance                                                                   | Optimized pick sequences & routes                                                                                                            | `ai_recommendations` (`ROUTE_OPTIMIZATION`), `pick_lists`                |
+| **Phase 8 — Conversational / Agentic Interfaces**        | Natural-language query over governed data; agentic workflows ("find slow movers in Mumbai DC and draft clearance POs") | All of the above via the governed API surface (§14)                                                                                  | Conversational answers; draft documents routed through normal approval workflows                                                             | All — via API, never direct DB access                                    |
 
 ### 15.3 Model Lifecycle & Governance
 
 - **`ai_model_runs`** captures model version, training data window, hyperparameters, and
   evaluation metrics for every run — giving full reproducibility and the ability to
-  explain *why* a particular forecast or recommendation was produced (a regulatory and
+  explain _why_ a particular forecast or recommendation was produced (a regulatory and
   trust requirement, not a nice-to-have, when AI suggestions influence purchasing and
   pricing decisions).
 - **Human-in-the-loop by default**: every `ai_recommendations` row starts as `PROPOSED`
@@ -2612,14 +2618,14 @@ turns this from "a model that runs once" into a **continuously-improving system*
 Combining the immutable ledgers with the audit trail enables detection patterns that are
 structurally impossible to spot in systems where balances can be edited directly:
 
-> *"Flag any `inventory_ledger` `ADJUSTMENT_NEGATIVE` entry where (a) the same
+> _"Flag any `inventory_ledger` `ADJUSTMENT_NEGATIVE` entry where (a) the same
 > `created_by` user posted the offsetting `RECEIPT` within the prior 30 days, (b) the
 > `reason_code` is `'COUNT_VARIANCE'`, and (c) the `audit_logs` show the user accessed
 > the item's cost data shortly before the adjustment — a pattern consistent with
-> inventory shrinkage concealment."*
+> inventory shrinkage concealment."_
 
-This is a SQL query (or feature-engineering pipeline) over data the system *already
-produces as a byproduct of normal operation* — no special instrumentation required,
+This is a SQL query (or feature-engineering pipeline) over data the system _already
+produces as a byproduct of normal operation_ — no special instrumentation required,
 because the ledger-first design makes every state change an explainable event by
 construction.
 
@@ -2652,24 +2658,24 @@ RBAC/audit/approval machinery as a human-originated one.
 
 ### 16.2 Recommended Stack by Layer
 
-| Layer | Recommendation | Rationale |
-|---|---|---|
-| **Backend framework** | NestJS (TypeScript) — already in use (`apps/api`) | Modular, DI-based architecture maps directly onto the bounded-context module design (§3.3); strong ecosystem for guards (RBAC), interceptors (audit logging), pipes (validation) |
-| **Frontend framework** | Next.js (React, TypeScript) — already in use (`apps/web`) | Server-side rendering for dashboards/reports; shared TypeScript types with backend via `packages/shared` |
-| **Mobile / Scanner app** | React Native or Progressive Web App with offline-first local store (WatermelonDB / SQLite + sync engine) | Code-sharing with the web TypeScript codebase; mature offline-sync patterns for warehouse connectivity gaps (§9.2) |
-| **Primary database** | PostgreSQL 16+ | Native Row-Level Security (§13.3), declarative partitioning (§6.1), `JSONB` for flexible payloads (`ai_recommendations.payload`, `audit_logs` snapshots), strong transactional guarantees for ledger integrity, mature ecosystem (Prisma already in use) |
-| **ORM / migrations** | Prisma — already in use (`apps/api/prisma/schema.prisma`) | Type-safe queries matching the TypeScript-first stack; explicit migration history supports the "schema as code, reviewed like code" discipline financial systems require |
-| **Caching / session store** | Redis | Permission-resolution cache (§12.9), rate-limit counters, idempotency-key tracking (§14.2), session/refresh-token store |
-| **Streaming / event bus** | Apache Kafka (or managed equivalent: AWS MSK / Confluent Cloud / Azure Event Hubs / GCP Pub/Sub with Kafka-compatible API) | Durable, replayable event log — a natural fit for "every domain event becomes an AI training signal" (§15.1); decouples integrations and AI consumers from OLTP load |
-| **Search / full-text** | OpenSearch / Elasticsearch | Item/supplier/customer search, faceted filtering, operational dashboards over event data |
-| **AI/ML platform** | Python (FastAPI services) + PyTorch/scikit-learn/Prophet for modeling; orchestration via Airflow or Dagster; served via a model-serving layer (e.g., managed endpoints / Triton / BentoML) | Python remains the dominant ML ecosystem; isolating AI services in their own runtime (§15.5) avoids forcing ML tooling constraints onto the transactional backend |
-| **Feature store / AI data lake** | Cloud object storage (S3/ADLS/GCS) + a lakehouse table format (Apache Iceberg / Delta Lake) + a feature-store layer (Feast or managed equivalent) | Decouples model training data from OLTP replicas; supports point-in-time correct feature retrieval (essential for valid backtesting) |
-| **Background jobs / workers** | BullMQ (Node, for in-stack jobs: balance projection, posting engine, notification dispatch) + dedicated workers for heavier AI/ETL pipelines | Matches existing Node/TypeScript stack for core workflows; keeps heavy compute isolated |
-| **API documentation** | OpenAPI 3.1 (generated from NestJS decorators) + GraphQL SDL for the aggregation gateway | Single source of truth for client SDK generation (§14.1) |
-| **Authentication** | OIDC-compliant identity provider (e.g., Auth0 / Azure AD B2C / Keycloak self-hosted) integrated via NestJS Passport strategies | Avoids building and maintaining custom credential storage; supports enterprise SSO requirements out of the box |
-| **Observability** | OpenTelemetry (traces/metrics/logs) → Grafana/Prometheus or a managed APM (Datadog/New Relic) | Vendor-neutral instrumentation standard; correlates gateway → service → DB → event-publish spans (§14.2) |
-| **CI/CD** | GitHub Actions (matches the existing `mchepuri/aivora` GitHub repo) with environment-gated deployment pipelines | Native integration with the existing source control; supports the test/build/deploy stages needed for a financial system's change-control discipline |
-| **Infrastructure as Code** | Terraform (cloud-agnostic) | Enables the multi-cloud deployment options discussed in §17 without rewriting provisioning logic |
+| Layer                            | Recommendation                                                                                                                                                                             | Rationale                                                                                                                                                                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend framework**            | NestJS (TypeScript) — already in use (`apps/api`)                                                                                                                                          | Modular, DI-based architecture maps directly onto the bounded-context module design (§3.3); strong ecosystem for guards (RBAC), interceptors (audit logging), pipes (validation)                                                                         |
+| **Frontend framework**           | Next.js (React, TypeScript) — already in use (`apps/web`)                                                                                                                                  | Server-side rendering for dashboards/reports; shared TypeScript types with backend via `packages/shared`                                                                                                                                                 |
+| **Mobile / Scanner app**         | React Native or Progressive Web App with offline-first local store (WatermelonDB / SQLite + sync engine)                                                                                   | Code-sharing with the web TypeScript codebase; mature offline-sync patterns for warehouse connectivity gaps (§9.2)                                                                                                                                       |
+| **Primary database**             | PostgreSQL 16+                                                                                                                                                                             | Native Row-Level Security (§13.3), declarative partitioning (§6.1), `JSONB` for flexible payloads (`ai_recommendations.payload`, `audit_logs` snapshots), strong transactional guarantees for ledger integrity, mature ecosystem (Prisma already in use) |
+| **ORM / migrations**             | Prisma — already in use (`apps/api/prisma/schema.prisma`)                                                                                                                                  | Type-safe queries matching the TypeScript-first stack; explicit migration history supports the "schema as code, reviewed like code" discipline financial systems require                                                                                 |
+| **Caching / session store**      | Redis                                                                                                                                                                                      | Permission-resolution cache (§12.9), rate-limit counters, idempotency-key tracking (§14.2), session/refresh-token store                                                                                                                                  |
+| **Streaming / event bus**        | Apache Kafka (or managed equivalent: AWS MSK / Confluent Cloud / Azure Event Hubs / GCP Pub/Sub with Kafka-compatible API)                                                                 | Durable, replayable event log — a natural fit for "every domain event becomes an AI training signal" (§15.1); decouples integrations and AI consumers from OLTP load                                                                                     |
+| **Search / full-text**           | OpenSearch / Elasticsearch                                                                                                                                                                 | Item/supplier/customer search, faceted filtering, operational dashboards over event data                                                                                                                                                                 |
+| **AI/ML platform**               | Python (FastAPI services) + PyTorch/scikit-learn/Prophet for modeling; orchestration via Airflow or Dagster; served via a model-serving layer (e.g., managed endpoints / Triton / BentoML) | Python remains the dominant ML ecosystem; isolating AI services in their own runtime (§15.5) avoids forcing ML tooling constraints onto the transactional backend                                                                                        |
+| **Feature store / AI data lake** | Cloud object storage (S3/ADLS/GCS) + a lakehouse table format (Apache Iceberg / Delta Lake) + a feature-store layer (Feast or managed equivalent)                                          | Decouples model training data from OLTP replicas; supports point-in-time correct feature retrieval (essential for valid backtesting)                                                                                                                     |
+| **Background jobs / workers**    | BullMQ (Node, for in-stack jobs: balance projection, posting engine, notification dispatch) + dedicated workers for heavier AI/ETL pipelines                                               | Matches existing Node/TypeScript stack for core workflows; keeps heavy compute isolated                                                                                                                                                                  |
+| **API documentation**            | OpenAPI 3.1 (generated from NestJS decorators) + GraphQL SDL for the aggregation gateway                                                                                                   | Single source of truth for client SDK generation (§14.1)                                                                                                                                                                                                 |
+| **Authentication**               | OIDC-compliant identity provider (e.g., Auth0 / Azure AD B2C / Keycloak self-hosted) integrated via NestJS Passport strategies                                                             | Avoids building and maintaining custom credential storage; supports enterprise SSO requirements out of the box                                                                                                                                           |
+| **Observability**                | OpenTelemetry (traces/metrics/logs) → Grafana/Prometheus or a managed APM (Datadog/New Relic)                                                                                              | Vendor-neutral instrumentation standard; correlates gateway → service → DB → event-publish spans (§14.2)                                                                                                                                                 |
+| **CI/CD**                        | GitHub Actions (matches the existing `mchepuri/aivora` GitHub repo) with environment-gated deployment pipelines                                                                            | Native integration with the existing source control; supports the test/build/deploy stages needed for a financial system's change-control discipline                                                                                                     |
+| **Infrastructure as Code**       | Terraform (cloud-agnostic)                                                                                                                                                                 | Enables the multi-cloud deployment options discussed in §17 without rewriting provisioning logic                                                                                                                                                         |
 
 ### 16.3 Why Not [Alternative]? — Notable Trade-offs
 
@@ -2682,7 +2688,7 @@ RBAC/audit/approval machinery as a human-originated one.
 - **Microservices from day one?** Deferred. A modular monolith (§3.2) delivers faster
   initially (simpler transactions across module boundaries, e.g., posting a GRN touches
   Inventory, Procurement, and GL atomically) while preserving clean module boundaries
-  that make *future* extraction of high-load domains (Inventory Ledger, AI services)
+  that make _future_ extraction of high-load domains (Inventory Ledger, AI services)
   straightforward once real scaling pressure — not speculative pressure — appears.
 - **Building a custom auth system?** Rejected in favor of an OIDC provider — credential
   storage and MFA are well-solved problems with severe consequences for getting wrong;
@@ -2694,7 +2700,7 @@ RBAC/audit/approval machinery as a human-originated one.
 
 ### 17.1 Cloud-Agnostic Reference Topology
 
-The platform is designed so the *same* container images and Terraform modules deploy to
+The platform is designed so the _same_ container images and Terraform modules deploy to
 any major cloud — only the managed-service bindings change. This is a deliberate hedge
 against vendor lock-in and a response to enterprise customers' frequent data-residency /
 existing-cloud-relationship requirements.
@@ -2738,20 +2744,20 @@ flowchart TB
 
 ### 17.2 Service Mapping by Cloud Provider
 
-| Capability | AWS | Azure | GCP |
-|---|---|---|---|
-| Container orchestration | ECS Fargate / EKS | Azure Container Apps / AKS | Cloud Run / GKE |
-| Managed PostgreSQL | RDS for PostgreSQL / Aurora PostgreSQL | Azure Database for PostgreSQL Flexible Server | Cloud SQL for PostgreSQL / AlloyDB |
-| Managed Redis | ElastiCache for Redis | Azure Cache for Redis | Memorystore for Redis |
-| Event streaming | MSK (Managed Kafka) / Kinesis | Event Hubs (Kafka-compatible) | Pub/Sub (+ Kafka-compatible bridge if needed) |
-| Object storage | S3 | Blob Storage | Cloud Storage |
-| Search | OpenSearch Service | Azure AI Search / self-managed OpenSearch on AKS | self-managed OpenSearch on GKE / Elastic Cloud |
-| Secrets & KMS | Secrets Manager + KMS | Key Vault | Secret Manager + Cloud KMS |
-| CDN / WAF | CloudFront + AWS WAF | Azure Front Door + WAF | Cloud CDN + Cloud Armor |
-| Identity | Cognito (or external OIDC: Auth0/Okta) | Azure AD B2C | Identity Platform (or external OIDC) |
-| Observability | CloudWatch + X-Ray (or Datadog) | Azure Monitor + App Insights (or Datadog) | Cloud Monitoring + Trace (or Datadog) |
-| IaC | Terraform (`aws` provider) | Terraform (`azurerm` provider) | Terraform (`google` provider) |
-| CI/CD | GitHub Actions → ECR → ECS/EKS | GitHub Actions → ACR → Container Apps/AKS | GitHub Actions → Artifact Registry → Cloud Run/GKE |
+| Capability              | AWS                                    | Azure                                            | GCP                                                |
+| ----------------------- | -------------------------------------- | ------------------------------------------------ | -------------------------------------------------- |
+| Container orchestration | ECS Fargate / EKS                      | Azure Container Apps / AKS                       | Cloud Run / GKE                                    |
+| Managed PostgreSQL      | RDS for PostgreSQL / Aurora PostgreSQL | Azure Database for PostgreSQL Flexible Server    | Cloud SQL for PostgreSQL / AlloyDB                 |
+| Managed Redis           | ElastiCache for Redis                  | Azure Cache for Redis                            | Memorystore for Redis                              |
+| Event streaming         | MSK (Managed Kafka) / Kinesis          | Event Hubs (Kafka-compatible)                    | Pub/Sub (+ Kafka-compatible bridge if needed)      |
+| Object storage          | S3                                     | Blob Storage                                     | Cloud Storage                                      |
+| Search                  | OpenSearch Service                     | Azure AI Search / self-managed OpenSearch on AKS | self-managed OpenSearch on GKE / Elastic Cloud     |
+| Secrets & KMS           | Secrets Manager + KMS                  | Key Vault                                        | Secret Manager + Cloud KMS                         |
+| CDN / WAF               | CloudFront + AWS WAF                   | Azure Front Door + WAF                           | Cloud CDN + Cloud Armor                            |
+| Identity                | Cognito (or external OIDC: Auth0/Okta) | Azure AD B2C                                     | Identity Platform (or external OIDC)               |
+| Observability           | CloudWatch + X-Ray (or Datadog)        | Azure Monitor + App Insights (or Datadog)        | Cloud Monitoring + Trace (or Datadog)              |
+| IaC                     | Terraform (`aws` provider)             | Terraform (`azurerm` provider)                   | Terraform (`google` provider)                      |
+| CI/CD                   | GitHub Actions → ECR → ECS/EKS         | GitHub Actions → ACR → Container Apps/AKS        | GitHub Actions → Artifact Registry → Cloud Run/GKE |
 
 > Terraform modules are organized so that 80–90% (application tier, networking
 > topology, observability wiring) is provider-agnostic via thin per-cloud adapter
@@ -2777,20 +2783,20 @@ Dev  ──▶  Staging (production-like, synthetic/anonymized data, full integr
   staging snapshot → security/SAST scan → canary deploy with automated rollback on
   error-rate/latency SLO breach.
 - **Database migrations** run as a distinct, reviewed pipeline stage (Prisma migrate)
-  *before* application deploy, with backward-compatible "expand/contract" migration
+  _before_ application deploy, with backward-compatible "expand/contract" migration
   patterns so that old and new application versions can run simultaneously during a
   rolling deploy without breaking.
 
 ### 17.4 Resilience & Scaling
 
-| Concern | Approach |
-|---|---|
-| High availability | Multi-AZ database (primary + standby with automated failover); stateless app tier behind load balancer with health-check-based instance replacement |
-| Read scaling | PostgreSQL read replicas serve reporting/analytics/GraphQL aggregation queries (§3.2); connection routing splits write vs. read traffic at the ORM/gateway layer |
-| Write scaling | Vertical scaling of the primary (ledger writes are inherently serialized per company via `entry_no`); partitioning (§6.1) keeps index sizes manageable as volume grows; the Inventory Ledger module is the first candidate for extraction into an independently-scaled service if/when write throughput becomes the bottleneck |
-| Disaster recovery | Automated point-in-time-recovery backups (continuous WAL archiving); cross-region backup replication; documented RPO/RTO targets per tenant tier (e.g., RPO ≤ 5 min, RTO ≤ 1 hr for standard tier; tighter for enterprise tier) |
-| Background processing | Queue-backed workers (BullMQ/Redis or managed queue service) with retry/backoff and dead-letter queues for the balance-projection, GL-posting, and notification pipelines — ensuring a transient failure never silently drops a ledger-derived side effect |
-| Capacity planning | Autoscaling policies driven by queue depth (workers), request latency/CPU (API), and connection pool saturation (database proxy tier) |
+| Concern               | Approach                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| High availability     | Multi-AZ database (primary + standby with automated failover); stateless app tier behind load balancer with health-check-based instance replacement                                                                                                                                                                            |
+| Read scaling          | PostgreSQL read replicas serve reporting/analytics/GraphQL aggregation queries (§3.2); connection routing splits write vs. read traffic at the ORM/gateway layer                                                                                                                                                               |
+| Write scaling         | Vertical scaling of the primary (ledger writes are inherently serialized per company via `entry_no`); partitioning (§6.1) keeps index sizes manageable as volume grows; the Inventory Ledger module is the first candidate for extraction into an independently-scaled service if/when write throughput becomes the bottleneck |
+| Disaster recovery     | Automated point-in-time-recovery backups (continuous WAL archiving); cross-region backup replication; documented RPO/RTO targets per tenant tier (e.g., RPO ≤ 5 min, RTO ≤ 1 hr for standard tier; tighter for enterprise tier)                                                                                                |
+| Background processing | Queue-backed workers (BullMQ/Redis or managed queue service) with retry/backoff and dead-letter queues for the balance-projection, GL-posting, and notification pipelines — ensuring a transient failure never silently drops a ledger-derived side effect                                                                     |
+| Capacity planning     | Autoscaling policies driven by queue depth (workers), request latency/CPU (API), and connection pool saturation (database proxy tier)                                                                                                                                                                                          |
 
 ### 17.5 Security & Compliance Posture in Deployment
 
@@ -2896,7 +2902,8 @@ classDiagram
 ```
 
 ### 18.3 Sequence Diagram — "Receive Goods → Stock Available → GL Posted"
-*(end-to-end trace tying together §7, §8, §9)*
+
+_(end-to-end trace tying together §7, §8, §9)_
 
 ```mermaid
 sequenceDiagram
@@ -2977,10 +2984,8 @@ flowchart TD
 
 ## Appendix: Document Change Log
 
-| Version | Date | Summary |
-|---|---|---|
-| 1.0 | 2026 (initial) | Executive summary, core principles, module list, high-level ER map, ~170-table footprint estimate |
-| 2.0 | 2026-06-06 | Full expansion: business requirements, functional architecture, 124-table domain inventory with ER diagrams, backbone-table schema definitions with PK/FK conventions, Inventory Ledger and GL posting flow designs, Warehouse/Barcode and Batch/Serial traceability architectures, GST/Tax architecture, RBAC model, Multi-Tenant SaaS design, API architecture, AI/ML roadmap, technology stack recommendations, multi-cloud deployment architecture, and UML/data-flow diagrams |
-| 2.1 | 2026-06-06 | Redesigned §12 RBAC Security Model as a layered **hybrid RBAC + ABAC + Segregation-of-Duties + Delegation** architecture, with an explicit comparison against pure-RBAC/ABAC/ReBAC alternatives; added `sod_conflict_rules`, `sod_violations`, and `role_delegations` tables plus a `condition_expr JSONB` overlay on `role_permissions` for value-based conditional grants; domain inventory grows from 124 → **127 tables** (Security & RBAC: 10 → 13) |
-
-
+| Version | Date           | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026 (initial) | Executive summary, core principles, module list, high-level ER map, ~170-table footprint estimate                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2.0     | 2026-06-06     | Full expansion: business requirements, functional architecture, 124-table domain inventory with ER diagrams, backbone-table schema definitions with PK/FK conventions, Inventory Ledger and GL posting flow designs, Warehouse/Barcode and Batch/Serial traceability architectures, GST/Tax architecture, RBAC model, Multi-Tenant SaaS design, API architecture, AI/ML roadmap, technology stack recommendations, multi-cloud deployment architecture, and UML/data-flow diagrams |
+| 2.1     | 2026-06-06     | Redesigned §12 RBAC Security Model as a layered **hybrid RBAC + ABAC + Segregation-of-Duties + Delegation** architecture, with an explicit comparison against pure-RBAC/ABAC/ReBAC alternatives; added `sod_conflict_rules`, `sod_violations`, and `role_delegations` tables plus a `condition_expr JSONB` overlay on `role_permissions` for value-based conditional grants; domain inventory grows from 124 → **127 tables** (Security & RBAC: 10 → 13)                           |
