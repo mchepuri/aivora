@@ -8,7 +8,7 @@
 
 ## Table of Contents
 
-1. [Executive Summary..](#1-executive-summary)
+1. [Executive Summary...](#1-executive-summary)
 2. [Business Requirements](#2-business-requirements)
 3. [Functional Architecture](#3-functional-architecture)
 4. [Detailed ER Diagram (100+ Tables)](#4-detailed-er-diagram-100-tables)
