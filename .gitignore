@@ -1,7 +1,31 @@
+# Sapling VCS
+.sl/
+
+# Dependencies
 node_modules/
-dist/
+
+# Next.js
 .next/
+apps/web/out/
+
+# NestJS build
+dist/
+
+# Environment files
 .env
+.env.local
 *.env.local
+
+# Vercel
+.vercel/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# TypeScript
 *.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
