@@ -28,6 +28,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   uom?: Uom;
+  prefill?: { code?: string; name?: string; uomClass?: UomClass };
 }
 
 interface FormState {
@@ -38,7 +39,7 @@ interface FormState {
 
 const DEFAULT_FORM: FormState = { code: '', name: '', uomClass: 'COUNT' };
 
-export function UomDialog({ open, onOpenChange, uom }: Props) {
+export function UomDialog({ open, onOpenChange, uom, prefill }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [error, setError] = useState('');
@@ -46,10 +47,20 @@ export function UomDialog({ open, onOpenChange, uom }: Props) {
 
   useEffect(() => {
     if (open) {
-      setForm(uom ? { code: uom.code, name: uom.name, uomClass: uom.uomClass } : DEFAULT_FORM);
+      if (uom) {
+        setForm({ code: uom.code, name: uom.name, uomClass: uom.uomClass });
+      } else if (prefill) {
+        setForm({
+          code: prefill.code ?? '',
+          name: prefill.name ?? '',
+          uomClass: prefill.uomClass ?? 'COUNT',
+        });
+      } else {
+        setForm(DEFAULT_FORM);
+      }
       setError('');
     }
-  }, [open, uom]);
+  }, [open, uom, prefill]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
