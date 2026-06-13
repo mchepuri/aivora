@@ -5,8 +5,9 @@ import { UsersModule } from './users/users.module';
 import { ApprovalLimitsModule } from './approval-limits/approval-limits.module';
 import { SodRulesModule } from './sod-rules/sod-rules.module';
 import { UomModule } from './master-data/uom/uom.module';
+import { InventoryBotModule } from './ai/inventory-bot/inventory-bot.module';
 
 @Module({
-  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule],
+  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule, InventoryBotModule],
 })
 export class AppModule {}
