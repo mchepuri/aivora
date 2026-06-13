@@ -111,3 +111,49 @@ model SodRule {
   @@unique([tenantId, roleAId, roleBId])
   @@map("sod_rules")
 }
+
+// ─── Master Data ─────────────────────────────────────────────────────────────
+
+enum UomClass {
+  COUNT
+  WEIGHT
+  VOLUME
+  LENGTH
+  TIME
+}
+
+model UnitOfMeasure {
+  id        String    @id @default(cuid())
+  code      String    @unique @db.VarChar(16)
+  name      String    @db.VarChar(50)
+  uomClass  UomClass
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  createdBy String?
+  updatedAt DateTime  @updatedAt
+  updatedBy String?
+
+  uomConversionsFrom UomConversion[] @relation("FromUom")
+  uomConversionsTo   UomConversion[] @relation("ToUom")
+
+  @@map("units_of_measure")
+}
+
+model UomConversion {
+  id               String        @id @default(cuid())
+  itemId           String
+  fromUomId        String
+  toUomId          String
+  conversionFactor Decimal       @db.Decimal(18, 8)
+  isDeleted        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  createdBy        String?
+  updatedAt        DateTime      @updatedAt
+  updatedBy        String?
+
+  fromUom UnitOfMeasure @relation("FromUom", fields: [fromUomId], references: [id])
+  toUom   UnitOfMeasure @relation("ToUom", fields: [toUomId], references: [id])
+
+  @@unique([itemId, fromUomId, toUomId])
+  @@map("uom_conversions")
+}
