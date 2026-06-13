@@ -9,11 +9,105 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  tenantId  String
+  email     String     @unique
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  userRoles UserRole[]
 
   @@map("users")
+}
+
+model Role {
+  id              String           @id @default(cuid())
+  tenantId        String
+  name            String
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  approvalLimits  ApprovalLimit[]
+  sodRulesAsRoleA SodRule[]        @relation("SodRuleRoleA")
+  sodRulesAsRoleB SodRule[]        @relation("SodRuleRoleB")
+
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+/// System-level permissions shared across all tenants.
+model Permission {
+  id              String           @id @default(cuid())
+  action          String           // e.g. "create", "read", "update", "delete"
+  resource        String           // e.g. "inventory", "orders", "users"
+  description     String?
+  createdAt       DateTime         @default(now())
+  rolePermissions RolePermission[]
+
+  @@unique([action, resource])
+  @@map("permissions")
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  /// Attribute-based conditions evaluated at runtime.
+  /// Shape: { "vendorCategory"?: string[], "costCenter"?: string[], "department"?: string[] }
+  conditions   Json?
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Maximum monetary amount a role may approve for a given resource type.
+/// Evaluated alongside the RBAC permission check — both must pass.
+model ApprovalLimit {
+  id        String   @id @default(cuid())
+  tenantId  String
+  roleId    String
+  /// e.g. "purchase_order", "payable", "expense_report"
+  resource  String
+  currency  String   @default("USD")
+  maxAmount Decimal  @db.Decimal(19, 4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, roleId, resource, currency])
+  @@map("approval_limits")
+}
+
+/// Segregation-of-Duties rule: a single user must never hold both roleA and roleB simultaneously.
+model SodRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  roleAId     String
+  roleBId     String
+  createdAt   DateTime @default(now())
+  roleA       Role     @relation("SodRuleRoleA", fields: [roleAId], references: [id], onDelete: Cascade)
+  roleB       Role     @relation("SodRuleRoleB", fields: [roleBId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, roleAId, roleBId])
+  @@map("sod_rules")
 }
