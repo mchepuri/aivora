@@ -1,8 +1,23 @@
+import { cookies } from 'next/headers';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('aivora_token')?.value;
+    if (token) return { Cookie: `aivora_token=${token}` };
+  } catch {
+    // cookies() throws in client context — browser sends cookies automatically
+  }
+  return {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const authHeaders = await getAuthHeaders();
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders },
     ...options,
   });
 
