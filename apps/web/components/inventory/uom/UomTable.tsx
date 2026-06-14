@@ -25,8 +25,7 @@ export function UomTable({ uoms }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   function openCreate() {
-    setEditing(undefined);
-    setDialogOpen(true);
+    router.push('/inventory/units-of-measure/new');
   }
 
   function openEdit(uom: Uom) {
