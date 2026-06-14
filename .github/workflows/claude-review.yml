@@ -5,6 +5,17 @@ on:
     types: [opened, synchronize, ready_for_review]
     branches:
       - main
+    paths:
+      - 'apps/**/*.ts'
+      - 'apps/**/*.tsx'
+      - 'apps/**/*.js'
+      - 'apps/**/*.jsx'
+      - 'apps/**/*.css'
+      - 'apps/**/*.scss'
+      - 'apps/**/tailwind.config.*'
+      - 'apps/**/postcss.config.*'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
 
 permissions:
   contents: read
