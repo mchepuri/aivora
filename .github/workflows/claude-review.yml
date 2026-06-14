@@ -5,6 +5,17 @@ on:
     types: [opened, synchronize, ready_for_review]
     branches:
       - main
+    paths:
+      - 'apps/**/*.ts'
+      - 'apps/**/*.tsx'
+      - 'apps/**/*.js'
+      - 'apps/**/*.jsx'
+      - 'apps/**/*.css'
+      - 'apps/**/*.scss'
+      - 'apps/**/tailwind.config.*'
+      - 'apps/**/postcss.config.*'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
 
 permissions:
   contents: read
@@ -20,15 +31,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Load review rules
+        id: rules
+        run: |
+          {
+            echo 'prompt<<REVIEW_EOF'
+            cat .github/CLAUDE_REVIEW.md
+            echo 'REVIEW_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            Review this pull request for a Next.js + NestJS monorepo (Aivora SCM platform).
-            Focus on:
-            - Bugs, logic errors, and edge cases
-            - Security issues (injection, auth bypasses, exposed secrets)
-            - TypeScript type safety
-            - Next.js best practices (server vs client components, dynamic vs static rendering)
-            - NestJS best practices (DTO validation, dependency injection, error handling)
-            - Consistency with existing patterns in the codebase
+          prompt: ${{ steps.rules.outputs.prompt }}
