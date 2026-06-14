@@ -5,6 +5,17 @@ on:
     types: [opened, synchronize, ready_for_review]
     branches:
       - main
+    paths:
+      - 'apps/**/*.ts'
+      - 'apps/**/*.tsx'
+      - 'apps/**/*.js'
+      - 'apps/**/*.jsx'
+      - 'apps/**/*.css'
+      - 'apps/**/*.scss'
+      - 'apps/**/tailwind.config.*'
+      - 'apps/**/postcss.config.*'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
 
 permissions:
   contents: read
@@ -24,7 +35,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Review this pull request for a Next.js + NestJS monorepo (Aivora SCM platform).
+            Review this pull request for a Next.js! + NestJS monorepo (Aivora SCM platform).
             Focus on:
             - Bugs, logic errors, and edge cases
             - Security issues (injection, auth bypasses, exposed secrets)
