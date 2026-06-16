@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { UomClass } from '@prisma/client';
 import { UomService } from '../../master-data/uom/uom.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
@@ -36,28 +36,37 @@ Rules:
 - If the user wants to list/show UOMs, set intent to "LIST_UOMS" and action to null.
 - For general questions, set intent to "CONVERSATIONAL" and action to null.
 - The reply should always be natural, conversational language.
-- Valid uomClass values: COUNT (for pieces, units, boxes), WEIGHT (for kg, lbs, grams), VOLUME (for liters, gallons), LENGTH (for meters, feet), TIME (for hours, days).`;
+- Valid uomClass values: COUNT (for pieces, units, boxes), WEIGHT (for kg, lbs, grams), VOLUME (for liters, gallons), LENGTH (for meters, feet), TIME (for hours, days).
+- IMPORTANT: Output only the raw JSON object. Do not wrap it in markdown code fences.`;
+
+const MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 
 @Injectable()
 export class InventoryBotService {
   private readonly logger = new Logger(InventoryBotService.name);
-  private readonly anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
+  private readonly openai = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://aivora.app',
+      'X-Title': 'Aivora SCM',
+    },
   });
 
   constructor(private readonly uomService: UomService) {}
 
   async chat(dto: ChatMessageDto): Promise<ChatResponseDto> {
-    const response = await this.anthropic.messages.create({
-      model: 'claude-opus-4-8',
+    const response = await this.openai.chat.completions.create({
+      model: MODEL,
       max_tokens: 1024,
-      thinking: { type: 'adaptive' },
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: dto.message }],
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: dto.message },
+      ],
     });
 
-    const textBlock = response.content.find((b) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
       return { reply: 'I could not process your request. Please try again.' };
     }
 
@@ -71,10 +80,10 @@ export class InventoryBotService {
     };
 
     try {
-      const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : textBlock.text);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch {
-      return { reply: textBlock.text };
+      return { reply: content };
     }
 
     if (
@@ -115,12 +124,9 @@ export class InventoryBotService {
       return { reply: `Here are your Units of Measure:\n${list}` };
     }
 
-    const chatResponse: ChatResponseDto = { reply: parsed.reply || textBlock.text };
+    const chatResponse: ChatResponseDto = { reply: parsed.reply || content };
 
-    if (
-      parsed.action?.type === 'PREFILL_UOM_DIALOG' &&
-      parsed.action.data
-    ) {
+    if (parsed.action?.type === 'PREFILL_UOM_DIALOG' && parsed.action.data) {
       const data = parsed.action.data;
       chatResponse.action = {
         type: 'PREFILL_UOM_DIALOG',
