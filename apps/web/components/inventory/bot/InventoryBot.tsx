@@ -5,19 +5,11 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import { ChatInput } from './ChatInput';
 import { ChatMessage, Message } from './ChatMessage';
-import { UomDialog } from '@/components/inventory/uom/UomDialog';
-
-const UOM_CLASSES = ['COUNT', 'WEIGHT', 'VOLUME', 'LENGTH', 'TIME'] as const;
-type UomClass = (typeof UOM_CLASSES)[number];
-
-interface PrefillUomAction {
-  type: 'PREFILL_UOM_DIALOG';
-  data: { code?: string; name?: string; uomClass?: UomClass };
-}
 
 interface ChatResponse {
+  conversationId: string;
   reply: string;
-  action?: PrefillUomAction;
+  redirect?: string;
 }
 
 let nextId = 1;
@@ -36,8 +28,6 @@ export function InventoryBot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [prefill, setPrefill] = useState<{ code?: string; name?: string; uomClass?: UomClass } | undefined>();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   function scrollToBottom() {
@@ -56,11 +46,9 @@ export function InventoryBot() {
       const assistantMsg: Message = { id: makeId(), role: 'assistant', text: res.reply };
       setMessages((prev) => [...prev, assistantMsg]);
 
-      if (res.action?.type === 'PREFILL_UOM_DIALOG') {
-        setPrefill(res.action.data);
-        setDialogOpen(true);
+      if (res.redirect) {
+        router.push(res.redirect);
       }
-
       router.refresh();
     } catch {
       const errMsg: Message = {
@@ -73,11 +61,6 @@ export function InventoryBot() {
       setLoading(false);
       scrollToBottom();
     }
-  }
-
-  function handleDialogClose(isOpen: boolean) {
-    setDialogOpen(isOpen);
-    if (!isOpen) setPrefill(undefined);
   }
 
   return (
@@ -133,12 +116,6 @@ export function InventoryBot() {
         </div>
       )}
 
-      {/* UOM Dialog for prefill */}
-      <UomDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        prefill={prefill}
-      />
     </>
   );
 }

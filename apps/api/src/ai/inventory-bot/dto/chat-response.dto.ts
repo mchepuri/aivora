@@ -19,6 +19,8 @@ export interface CreateUomAction {
 }
 
 export interface ChatResponseDto {
+  conversationId: string;
   reply: string;
   action?: PrefillUomAction | CreateUomAction;
+  redirect?: string;
 }
