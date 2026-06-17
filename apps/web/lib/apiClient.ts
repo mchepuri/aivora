@@ -1,8 +1,22 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    const token = cookieStore.get('aivora_token')?.value;
+    if (token) return { Cookie: `aivora_token=${token}` };
+  } catch {
+    // Not in a server context — browser sends the cookie automatically
+  }
+  return {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const authHeaders = await getAuthHeaders();
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders },
     ...options,
   });
 
