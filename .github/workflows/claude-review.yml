@@ -16,6 +16,9 @@ on:
       - 'apps/**/postcss.config.*'
       - 'packages/**/*.ts'
       - 'packages/**/*.tsx'
+      - '!**/package-lock.json'
+      - '!**/prisma/migrations/**'
+      - '!.github/**'
 
 permissions:
   contents: read
@@ -42,7 +45,7 @@ jobs:
           {
             echo 'prompt<<REVIEW_EOF'
             printf '## Pull Request Context\n\n'
-            printf 'PR: #%s — %s\n' "$PR_NUMBER" "$PR_TITLE"
+            printf 'PR: #%s - %s\n' "$PR_NUMBER" "$PR_TITLE"
             printf 'Base SHA: %s\n' "$BASE_SHA"
             printf 'Head SHA: %s\n\n' "$HEAD_SHA"
             printf '## Changed Files\n\n```\n'
@@ -57,7 +60,7 @@ jobs:
             fi
             printf '```\n\n'
             printf 'The diff above is complete. Do not use git or Read tools to fetch code — everything you need is above.\n\n'
-            printf '---\n\n'
+            printf '%s\n\n' '---'
             cat .github/CLAUDE_REVIEW.md
             echo 'REVIEW_EOF'
           } >> "$GITHUB_OUTPUT"
@@ -68,6 +71,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: ${{ steps.rules.outputs.prompt }}
           show_full_output: true
+          claude_args: "--max-turns 5"
           settings: |
             {
               "model": "claude-sonnet-4-6",
