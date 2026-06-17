@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "prebuild": "rimraf dist tsconfig.tsbuildinfo",
+    "predev": "rimraf dist tsconfig.tsbuildinfo",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",
