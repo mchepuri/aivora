@@ -101,14 +101,6 @@ export class InventoryBotService {
       return { conversationId, reply: 'I could not process your request. Please try again.' };
     }
 
-    // Persist turn to history (trim to cap)
-    const updatedHistory: ChatCompletionMessageParam[] = [
-      ...history,
-      { role: 'user', content: dto.message },
-      { role: 'assistant', content },
-    ];
-    this.sessions.set(conversationId, updatedHistory.slice(-MAX_HISTORY_MESSAGES));
-
     let parsed: {
       intent: string;
       reply: string;
@@ -122,6 +114,7 @@ export class InventoryBotService {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch {
+      this.persistTurn(conversationId, history, dto.message, content);
       return { conversationId, reply: content };
     }
 
@@ -149,27 +142,30 @@ export class InventoryBotService {
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           this.logger.error(`Failed to create UOM via bot: ${message}`);
-          return {
-            conversationId,
-            reply: `I tried to create the UOM but encountered an error: ${message}. Please use the form to create it manually.`,
-          };
+          const errorReply = `I tried to create the UOM but encountered an error: ${message}. Please use the form to create it manually.`;
+          this.persistTurn(conversationId, history, dto.message, errorReply);
+          return { conversationId, reply: errorReply };
         }
       }
     }
 
     if (parsed.intent === 'LIST_UOMS') {
       const uoms = await this.uomService.findAll({ limit: 20, offset: 0 });
+      let listReply: string;
       if (uoms.length === 0) {
-        return {
-          conversationId,
-          reply: 'There are no Units of Measure configured yet. Would you like to create one?',
-        };
+        listReply = 'There are no Units of Measure configured yet. Would you like to create one?';
+      } else {
+        const list = uoms.map((u) => `• ${u.code} — ${u.name} (${u.uomClass})`).join('\n');
+        listReply = `Here are your Units of Measure:\n${list}`;
       }
-      const list = uoms.map((u) => `• ${u.code} — ${u.name} (${u.uomClass})`).join('\n');
-      return { conversationId, reply: `Here are your Units of Measure:\n${list}` };
+      this.persistTurn(conversationId, history, dto.message, listReply);
+      return { conversationId, reply: listReply };
     }
 
-    const chatResponse: ChatResponseDto = { conversationId, reply: parsed.reply || content };
+    const finalReply = parsed.reply || content;
+    this.persistTurn(conversationId, history, dto.message, finalReply);
+
+    const chatResponse: ChatResponseDto = { conversationId, reply: finalReply };
 
     if (parsed.action?.type === 'PREFILL_UOM_DIALOG' && parsed.action.data) {
       const data = parsed.action.data;
@@ -187,6 +183,20 @@ export class InventoryBotService {
     }
 
     return chatResponse;
+  }
+
+  private persistTurn(
+    conversationId: string,
+    history: ChatCompletionMessageParam[],
+    userMessage: string,
+    assistantReply: string,
+  ): void {
+    const updated: ChatCompletionMessageParam[] = [
+      ...history,
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: assistantReply },
+    ];
+    this.sessions.set(conversationId, updated.slice(-MAX_HISTORY_MESSAGES));
   }
 
   private isValidUomClass(value: string): value is UomClass {

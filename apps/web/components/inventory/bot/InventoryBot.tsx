@@ -28,6 +28,7 @@ export function InventoryBot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   function scrollToBottom() {
@@ -41,7 +42,11 @@ export function InventoryBot() {
     scrollToBottom();
 
     try {
-      const res = await apiClient.post<ChatResponse>('/ai/inventory-bot/chat', { message: text });
+      const res = await apiClient.post<ChatResponse>('/ai/inventory-bot/chat', {
+        message: text,
+        conversationId,
+      });
+      setConversationId(res.conversationId);
 
       const assistantMsg: Message = { id: makeId(), role: 'assistant', text: res.reply };
       setMessages((prev) => [...prev, assistantMsg]);
