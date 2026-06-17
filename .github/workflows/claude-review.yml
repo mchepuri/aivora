@@ -41,6 +41,7 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
           {
             echo 'prompt<<REVIEW_EOF'
@@ -71,7 +72,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: ${{ steps.rules.outputs.prompt }}
           show_full_output: true
-          claude_args: "--max-turns 15"
+          claude_args: "--max-turns 15 --thinking-budget-tokens 2000"
           settings: |
             {
               "model": "claude-sonnet-4-6",
