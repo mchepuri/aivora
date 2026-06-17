@@ -13,9 +13,10 @@ import { UpdateUomDto } from './dto/update-uom.dto';
 export class UomService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(query: ListUomDto) {
+  findAll(tenantId: string, query: ListUomDto) {
     return this.prisma.unitOfMeasure.findMany({
       where: {
+        tenantId,
         isDeleted: false,
         ...(query.uomClass && { uomClass: query.uomClass }),
       },
@@ -25,9 +26,9 @@ export class UomService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, tenantId: string) {
     const uom = await this.prisma.unitOfMeasure.findFirst({
-      where: { id, isDeleted: false },
+      where: { id, tenantId, isDeleted: false },
     });
     if (!uom) throw new NotFoundException(`UOM ${id} not found`);
     return uom;
@@ -38,14 +39,14 @@ export class UomService {
       return await this.prisma.unitOfMeasure.create({ data: dto });
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('UOM code already exists');
+        throw new ConflictException(`A UOM with code "${dto.code}" already exists`);
       }
       throw e;
     }
   }
 
-  async update(id: string, dto: UpdateUomDto) {
-    await this.findOne(id);
+  async update(id: string, tenantId: string, dto: UpdateUomDto) {
+    await this.findOne(id, tenantId);
     try {
       return await this.prisma.unitOfMeasure.update({
         where: { id },
@@ -53,14 +54,14 @@ export class UomService {
       });
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('UOM code already exists');
+        throw new ConflictException(`A UOM with code "${dto.code}" already exists`);
       }
       throw e;
     }
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, tenantId: string) {
+    await this.findOne(id, tenantId);
     await this.prisma.unitOfMeasure.update({
       where: { id },
       data: { isDeleted: true },

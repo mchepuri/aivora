@@ -125,7 +125,8 @@ enum UomClass {
 
 model UnitOfMeasure {
   id        String    @id @default(cuid())
-  code      String    @unique @db.VarChar(16)
+  tenantId  String
+  code      String    @db.VarChar(16)
   name      String    @db.VarChar(50)
   uomClass  UomClass
   isDeleted Boolean   @default(false)

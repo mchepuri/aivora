@@ -20,13 +20,13 @@ export class UomController {
   constructor(private readonly uomService: UomService) {}
 
   @Get()
-  findAll(@Query() query: ListUomDto) {
-    return this.uomService.findAll(query);
+  findAll(@Query('tenantId') tenantId: string, @Query() query: ListUomDto) {
+    return this.uomService.findAll(tenantId, query);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.uomService.findOne(id);
+  findOne(@Param('id') id: string, @Query('tenantId') tenantId: string) {
+    return this.uomService.findOne(id, tenantId);
   }
 
   @Post()
@@ -36,13 +36,17 @@ export class UomController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUomDto) {
-    return this.uomService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+    @Body() dto: UpdateUomDto,
+  ) {
+    return this.uomService.update(id, tenantId, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.uomService.remove(id);
+  remove(@Param('id') id: string, @Query('tenantId') tenantId: string) {
+    return this.uomService.remove(id, tenantId);
   }
 }

@@ -3,6 +3,10 @@ import { UomClass } from '@prisma/client';
 
 export class CreateUomDto {
   @IsString()
+  @MaxLength(255)
+  tenantId!: string;
+
+  @IsString()
   @MaxLength(16)
   code!: string;
 
