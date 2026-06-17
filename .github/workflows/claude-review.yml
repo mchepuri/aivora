@@ -16,6 +16,8 @@ on:
       - 'apps/**/postcss.config.*'
       - 'packages/**/*.ts'
       - 'packages/**/*.tsx'
+      - '!**/package-lock.json'
+      - '!**/prisma/migrations/**'
 
 permissions:
   contents: read
