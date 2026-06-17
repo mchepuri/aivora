@@ -35,6 +35,7 @@ export function UomCreateForm() {
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create UOM');
+    } finally {
       setSaving(false);
     }
   }
