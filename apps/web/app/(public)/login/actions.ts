@@ -29,8 +29,12 @@ export async function loginAction(
     return { error: 'Unable to reach the server. Please try again.' };
   }
 
+  if (!data?.accessToken) {
+    return { error: 'Unexpected response from server. Please try again.' };
+  }
+
   const cookieStore = await cookies();
-  cookieStore.set('aivora_token', data!.accessToken, {
+  cookieStore.set('aivora_token', data.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -38,7 +42,8 @@ export async function loginAction(
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
 
-  redirect(callbackUrl || '/dashboard');
+  const safeUrl = callbackUrl?.startsWith('/') ? callbackUrl : '/dashboard';
+  redirect(safeUrl);
 }
 
 export async function logoutAction(): Promise<never> {
