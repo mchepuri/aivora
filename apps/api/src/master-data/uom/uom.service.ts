@@ -38,7 +38,7 @@ export class UomService {
       return await this.prisma.unitOfMeasure.create({ data: dto });
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('UOM code already exists');
+        throw new ConflictException(`A UOM with code "${dto.code}" already exists`);
       }
       throw e;
     }
@@ -53,7 +53,7 @@ export class UomService {
       });
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('UOM code already exists');
+        throw new ConflictException(`A UOM with code "${dto.code}" already exists`);
       }
       throw e;
     }
