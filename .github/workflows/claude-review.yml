@@ -44,7 +44,7 @@ jobs:
           {
             echo 'prompt<<REVIEW_EOF'
             printf '## Pull Request Context\n\n'
-            printf 'PR: #%s — %s\n' "$PR_NUMBER" "$PR_TITLE"
+            printf 'PR: #%s - %s\n' "$PR_NUMBER" "$PR_TITLE"
             printf 'Base SHA: %s\n' "$BASE_SHA"
             printf 'Head SHA: %s\n\n' "$HEAD_SHA"
             printf '## Changed Files\n\n```\n'
@@ -59,7 +59,7 @@ jobs:
             fi
             printf '```\n\n'
             printf 'The diff above is complete. Do not use git or Read tools to fetch code — everything you need is above.\n\n'
-            printf '---\n\n'
+            printf '%s\n\n' '---'
             cat .github/CLAUDE_REVIEW.md
             echo 'REVIEW_EOF'
           } >> "$GITHUB_OUTPUT"
