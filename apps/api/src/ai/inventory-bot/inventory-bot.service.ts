@@ -61,7 +61,7 @@ export class InventoryBotService {
 
   constructor(private readonly uomService: UomService) {}
 
-  async chat(dto: ChatMessageDto): Promise<ChatResponseDto> {
+  async chat(dto: ChatMessageDto, tenantId: string): Promise<ChatResponseDto> {
     const conversationId = dto.conversationId ?? randomUUID();
     const history = this.sessions.get(conversationId) ?? [];
 
@@ -98,6 +98,7 @@ export class InventoryBotService {
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      this.logger.warn(`Empty content from model. finish_reason=${response.choices[0]?.finish_reason} model=${response.model}`);
       return { conversationId, reply: 'I could not process your request. Please try again.' };
     }
 
@@ -130,7 +131,7 @@ export class InventoryBotService {
             code: code.toUpperCase(),
             name,
             uomClass: uomClass as UomClass,
-          });
+          }, tenantId);
           const successReply =
             parsed.reply || `I've created the UOM "${created.name}" (${created.code}) successfully.`;
           this.persistTurn(conversationId, history, dto.message, successReply);
@@ -150,7 +151,7 @@ export class InventoryBotService {
     }
 
     if (parsed.intent === 'LIST_UOMS') {
-      const uoms = await this.uomService.findAll({ limit: 20, offset: 0 });
+      const uoms = await this.uomService.findAll(tenantId, { limit: 20, offset: 0 });
       let listReply: string;
       if (uoms.length === 0) {
         listReply = 'There are no Units of Measure configured yet. Would you like to create one?';
