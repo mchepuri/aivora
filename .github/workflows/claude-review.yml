@@ -36,9 +36,31 @@ jobs:
 
       - name: Load review rules
         id: rules
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           {
             echo 'prompt<<REVIEW_EOF'
+            printf '## Pull Request Context\n\n'
+            printf 'PR: #%s — %s\n' "$PR_NUMBER" "$PR_TITLE"
+            printf 'Base SHA: %s\n' "$BASE_SHA"
+            printf 'Head SHA: %s\n\n' "$HEAD_SHA"
+            printf '## Changed Files\n\n```\n'
+            git diff --stat "$BASE_SHA" "$HEAD_SHA"
+            printf '```\n\n'
+            printf '## Full Diff\n\n```diff\n'
+            DIFF_SIZE=$(git diff "$BASE_SHA" "$HEAD_SHA" | wc -c)
+            if [ "$DIFF_SIZE" -gt 200000 ]; then
+              printf 'Diff too large to inline (%s bytes). Use git diff %s %s -- <file> to inspect specific files.\n' "$DIFF_SIZE" "$BASE_SHA" "$HEAD_SHA"
+            else
+              git diff "$BASE_SHA" "$HEAD_SHA"
+            fi
+            printf '```\n\n'
+            printf 'The diff above is complete. Do not use git or Read tools to fetch code — everything you need is above.\n\n'
+            printf '---\n\n'
             cat .github/CLAUDE_REVIEW.md
             echo 'REVIEW_EOF'
           } >> "$GITHUB_OUTPUT"
@@ -51,8 +73,9 @@ jobs:
           show_full_output: true
           settings: |
             {
+              "model": "claude-sonnet-4-6",
               "permissions": {
-                "allow": ["Bash(git*)", "Bash(gh*)", "Write"]
+                "allow": ["Bash(gh api*)", "Write"]
               }
             }
 
