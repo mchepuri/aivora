@@ -67,3 +67,4 @@ Stack: TypeScript strict · Tailwind CSS v4 · Prisma 5 · PostgreSQL · npm wor
 - Formatting / whitespace (handled by the linter)
 - Minor naming preferences when the existing name is clear
 - Speculative future improvements not required by the PR
+- Any issue listed in the "Already resolved" section above — the author has already addressed it; repeating the same comment adds noise and blocks merge unnecessarily
