@@ -24,6 +24,7 @@ permissions:
   contents: read
   pull-requests: write
   id-token: write
+  actions: read
 
 jobs:
   claude-review:
@@ -37,11 +38,21 @@ jobs:
       - name: Load review rules
         id: rules
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
         run: |
+          # Fetch review threads that the PR author has already resolved
+          RESOLVED_THREADS=$(gh api graphql \
+            -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved path line comments(first:1){nodes{body}}}}}}}' \
+            -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
+            --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==true)]' \
+            2>/dev/null || echo '[]')
+
           {
             echo 'prompt<<REVIEW_EOF'
             printf '## Pull Request Context\n\n'
@@ -60,6 +71,16 @@ jobs:
             fi
             printf '```\n\n'
             printf 'The diff above is complete. Do not use git or Read tools to fetch code — everything you need is above.\n\n'
+
+            RESOLVED_COUNT=$(echo "$RESOLVED_THREADS" | jq 'length')
+            if [ "$RESOLVED_COUNT" -gt 0 ]; then
+              printf '%s\n\n' '---'
+              printf '%s\n\n' '## Already resolved — do not re-flag'
+              printf '%s\n\n' 'The PR author has resolved the following review threads. **Do not re-raise any of these issues.** Only flag them again if the diff above shows the exact same problem is still present at a new location.'
+              echo "$RESOLVED_THREADS" | jq -r '.[] | "- `\(.path)` line \(.line // "?"): \(.comments.nodes[0].body | split("\n")[0])"'
+              printf '\n'
+            fi
+
             printf '%s\n\n' '---'
             cat .github/CLAUDE_REVIEW.md
             echo 'REVIEW_EOF'
