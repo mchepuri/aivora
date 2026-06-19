@@ -125,7 +125,8 @@ enum UomClass {
 
 model UnitOfMeasure {
   id        String    @id @default(cuid())
-  code      String    @unique @db.VarChar(16)
+  tenantId  String
+  code      String    @db.VarChar(16)
   name      String    @db.VarChar(50)
   uomClass  UomClass
   isDeleted Boolean   @default(false)
@@ -137,6 +138,9 @@ model UnitOfMeasure {
   uomConversionsFrom UomConversion[] @relation("FromUom")
   uomConversionsTo   UomConversion[] @relation("ToUom")
 
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift.
+  @@index([tenantId, code], map: "units_of_measure_code_active_key")
   @@map("units_of_measure")
 }
 
