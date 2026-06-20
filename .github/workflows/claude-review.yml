@@ -23,7 +23,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  id-token: write
   actions: read
 
 jobs:
@@ -61,9 +60,9 @@ jobs:
             printf 'Repo: %s\n' "$REPO"
             printf 'PR number: %s\n' "$PR_NUMBER"
             printf 'Head commit SHA: %s\n\n' "$HEAD_SHA"
-            printf 'Post your entire review — summary + all inline comments — in **one** `gh api` call using a JSON file:\n\n'
+            printf 'Post your entire review — summary + all inline comments — in **one** `gh api` call piped from stdin (no file writes needed):\n\n'
             printf '```bash\n'
-            printf 'cat > /tmp/review.json << '"'"'PAYLOAD_EOF'"'"'\n'
+            printf 'gh api repos/%s/pulls/%s/reviews --input - << '"'"'PAYLOAD_EOF'"'"'\n' "$REPO" "$PR_NUMBER"
             printf '{\n'
             printf '  "commit_id": "%s",\n' "$HEAD_SHA"
             printf '  "body": "## Review summary here",\n'
@@ -73,10 +72,9 @@ jobs:
             printf '  ]\n'
             printf '}\n'
             printf 'PAYLOAD_EOF\n'
-            printf 'gh api repos/%s/pulls/%s/reviews --input /tmp/review.json\n' "$REPO" "$PR_NUMBER"
             printf '```\n\n'
             printf 'Use `"event": "REQUEST_CHANGES"` if blocking issues exist, `"event": "COMMENT"` otherwise.\n'
-            printf 'Do NOT call any other tools before posting — the diff below is complete.\n\n'
+            printf 'Do NOT write any files. Do NOT call any other tools before posting — the diff below is complete.\n\n'
             printf '%s\n\n' '---'
             printf '## Pull Request Context\n\n'
             printf 'PR: #%s — %s\n' "$PR_NUMBER" "$PR_TITLE"
@@ -115,12 +113,14 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: ${{ steps.rules.outputs.prompt }}
           show_full_output: true
-          claude_args: "--max-turns 5"
+          claude_args: "--max-turns 15"
           settings: |
             {
               "model": "claude-sonnet-4-6",
               "permissions": {
-                "allow": ["Bash(gh api repos/mchepuri/aivora/pulls/*)", "Write(/tmp/*)"]
+                "allow": [
+                  "Bash(gh api repos/mchepuri/aivora/pulls/*)"
+                ]
               }
             }
 
