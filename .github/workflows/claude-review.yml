@@ -23,7 +23,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  id-token: write
   actions: read
 
 jobs:
@@ -115,12 +114,18 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: ${{ steps.rules.outputs.prompt }}
           show_full_output: true
-          claude_args: "--max-turns 5"
+          claude_args: "--max-turns 8"
           settings: |
             {
               "model": "claude-sonnet-4-6",
               "permissions": {
-                "allow": ["Bash(gh api repos/mchepuri/aivora/pulls/*)", "Write(/tmp/*)"]
+                "allow": [
+                  "Bash(gh api repos/mchepuri/aivora/pulls/*)",
+                  "Bash(cat > /tmp/*)",
+                  "Bash(tee /tmp/*)",
+                  "Bash(python3 *)",
+                  "Write(/tmp/*)"
+                ]
               }
             }
 
