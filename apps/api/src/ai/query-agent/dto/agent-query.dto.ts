@@ -1,6 +1,6 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
-export class ChatMessageDto {
+export class AgentQueryDto {
   @IsString()
   @MaxLength(2000)
   message!: string;

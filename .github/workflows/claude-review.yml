@@ -113,11 +113,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: ${{ steps.rules.outputs.prompt }}
           show_full_output: true
-          # We already hit max-turns=10 in testing with some complex PRs, and increasing it to 15 should give enough buffer for even the most complex reviews to be completed in one run.
+          # We already hit max-turns=15 in testing with some complex PRs, and increasing it to 15 should give enough buffer for even the most complex reviews to be completed in one run.
           claude_args: "--max-turns 15"
           settings: |
             {
               "model": "claude-sonnet-4-6",
+              cache_control: { type: "ephemeral" },
               "permissions": {
                 "allow": [
                   "Bash(gh api repos/mchepuri/aivora/pulls/*)"
