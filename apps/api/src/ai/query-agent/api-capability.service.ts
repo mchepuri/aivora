@@ -37,6 +37,8 @@ export class ApiCapabilityService {
             dto.code = String(body['code'] ?? '').toUpperCase().trim();
             dto.name = String(body['name'] ?? '').trim();
             dto.uomClass = raw as UomClass;
+            if (!dto.code) throw new Error('code is required.');
+            if (!dto.name) throw new Error('name is required.');
             const created = await this.uomService.create(dto, tenantId);
             return { id: created.id, code: created.code, name: created.name, uomClass: created.uomClass };
           },

@@ -113,6 +113,32 @@ describe('ApiCapabilityService', () => {
       expect(result.success).toBe(true);
     });
 
+    it('returns an error when code is empty', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/uom',
+          { code: '', name: 'Centimeters', uomClass: 'LENGTH' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/code is required/);
+      expect(uomService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when name is empty', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/uom',
+          { code: 'CM', name: '', uomClass: 'LENGTH' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/name is required/);
+      expect(uomService.create).not.toHaveBeenCalled();
+    });
+
     it('returns the conflict error message when the code already exists', async () => {
       uomService.create.mockRejectedValue(
         new ConflictException('A UOM with code "CM" already exists'),
