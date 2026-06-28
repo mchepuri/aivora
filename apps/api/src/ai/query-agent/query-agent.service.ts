@@ -39,7 +39,7 @@ const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: 'execute_sql',
       description:
-        "Executes a read-only SELECT statement and returns rows as JSON. Always scope results to the tenant using WHERE tenant_id = '<tenantId>'.",
+        'Executes a read-only SELECT statement and returns rows as JSON. Always scope results to the tenant using WHERE "tenantId" = \'<tenantId>\'.',
       parameters: {
         type: 'object',
         properties: {
@@ -108,7 +108,8 @@ export class QueryAgentService {
       '',
       'Agent rules:',
       '- Only generate SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or ALTER.',
-      `- Every query MUST include: WHERE tenant_id = '${tenantId}'`,
+      `- Every query MUST include: WHERE "tenantId" = '${tenantId}'`,
+      '- IMPORTANT: The tenant column is "tenantId" (camelCase, quoted). Never use tenant_id (snake_case).',
       '- Use the describe_table tool when you need to confirm column names before querying.',
       '- Use explicit JOINs based on the foreign key relationships shown in the schema.',
       '- Respond with a concise natural language summary of the results. Never expose raw SQL.',

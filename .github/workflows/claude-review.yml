@@ -118,7 +118,7 @@ jobs:
           settings: |
             {
               "model": "claude-sonnet-4-6",
-              cache_control: { type: "ephemeral" },
+              "cache_control": { "type": "ephemeral" },
               "permissions": {
                 "allow": [
                   "Bash(gh api repos/mchepuri/aivora/pulls/*)"

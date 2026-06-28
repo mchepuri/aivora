@@ -26,13 +26,14 @@ export class SqlExecutorService {
       throw new Error('Query contains a forbidden SQL keyword.');
     }
 
-    if (!q.toLowerCase().includes('tenant_id')) {
-      throw new Error('Query must include a tenant_id filter.');
+    if (!q.toLowerCase().includes('tenantid')) {
+      throw new Error('Query must include a tenantId filter.');
     }
 
-    const tenantPattern = new RegExp(`tenant_id\\s*=\\s*'${tenantId}'`);
+    const escapedId = tenantId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tenantPattern = new RegExp(`"?tenantId"?\\s*=\\s*'${escapedId}'`, 'i');
     if (!tenantPattern.test(q)) {
-      throw new Error('Query tenant_id does not match the authenticated tenant.');
+      throw new Error('Query tenantId does not match the authenticated tenant.');
     }
 
     const safe = LIMIT_RE.test(q) ? q : `${q} LIMIT ${MAX_ROWS}`;

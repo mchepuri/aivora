@@ -3,7 +3,7 @@ import { SqlExecutorService } from './sql-executor.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const TENANT_ID = 'tenant-abc-123';
-const VALID_QUERY = `SELECT id, code, name FROM units_of_measure WHERE tenant_id = '${TENANT_ID}'`;
+const VALID_QUERY = `SELECT id, code, name FROM units_of_measure WHERE "tenantId" = '${TENANT_ID}'`;
 
 describe('SqlExecutorService', () => {
   let service: SqlExecutorService;
@@ -41,15 +41,15 @@ describe('SqlExecutorService', () => {
       ).rejects.toThrow('forbidden SQL keyword');
     });
 
-    it('rejects a query without tenant_id', async () => {
+    it('rejects a query without tenantId', async () => {
       await expect(
         service.execute(`SELECT id FROM units_of_measure WHERE code = 'KG'`, TENANT_ID),
-      ).rejects.toThrow('must include a tenant_id filter');
+      ).rejects.toThrow('must include a tenantId filter');
     });
 
-    it('rejects a query whose tenant_id value does not match the authenticated tenant', async () => {
+    it('rejects a query whose tenantId value does not match the authenticated tenant', async () => {
       await expect(
-        service.execute(`SELECT id FROM units_of_measure WHERE tenant_id = 'other-tenant'`, TENANT_ID),
+        service.execute(`SELECT id FROM units_of_measure WHERE "tenantId" = 'other-tenant'`, TENANT_ID),
       ).rejects.toThrow('does not match the authenticated tenant');
     });
   });
