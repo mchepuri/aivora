@@ -2,32 +2,126 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
     branches:
       - main
+    paths:
+      - 'apps/**/*.ts'
+      - 'apps/**/*.tsx'
+      - 'apps/**/*.js'
+      - 'apps/**/*.jsx'
+      - 'apps/**/*.css'
+      - 'apps/**/*.scss'
+      - 'apps/**/tailwind.config.*'
+      - 'apps/**/postcss.config.*'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
+      - '!**/package-lock.json'
+      - '!**/prisma/migrations/**'
+      - '!.github/**'
 
 permissions:
   contents: read
   pull-requests: write
-  id-token: write
+  actions: read
 
 jobs:
   claude-review:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Load review rules
+        id: rules
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          # Fetch review threads that the PR author has already resolved
+          RESOLVED_THREADS=$(gh api graphql \
+            -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved path line comments(first:1){nodes{body}}}}}}}' \
+            -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F pr="$PR_NUMBER" \
+            --jq '[.data.repository.pullRequest.reviewThreads.nodes[]|select(.isResolved==true)]' \
+            2>/dev/null || echo '[]')
+
+          REPO="$REPO_OWNER/$REPO_NAME"
+
+          {
+            echo 'prompt<<REVIEW_EOF'
+            printf '## Review posting instructions\n\n'
+            printf 'Repo: %s\n' "$REPO"
+            printf 'PR number: %s\n' "$PR_NUMBER"
+            printf 'Head commit SHA: %s\n\n' "$HEAD_SHA"
+            printf 'Post your entire review — summary + all inline comments — in **one** `gh api` call piped from stdin (no file writes needed):\n\n'
+            printf '```bash\n'
+            printf 'gh api repos/%s/pulls/%s/reviews --input - << '"'"'PAYLOAD_EOF'"'"'\n' "$REPO" "$PR_NUMBER"
+            printf '{\n'
+            printf '  "commit_id": "%s",\n' "$HEAD_SHA"
+            printf '  "body": "## Review summary here",\n'
+            printf '  "event": "REQUEST_CHANGES",\n'
+            printf '  "comments": [\n'
+            printf '    { "path": "apps/api/src/foo.ts", "line": 42, "body": "inline comment here" }\n'
+            printf '  ]\n'
+            printf '}\n'
+            printf 'PAYLOAD_EOF\n'
+            printf '```\n\n'
+            printf 'Use `"event": "APPROVE"` if no blocking issues exist (this dismisses any prior REQUEST_CHANGES review), `"event": "REQUEST_CHANGES"` if blocking issues exist, or `"event": "COMMENT"` only for truly optional suggestions with no blocking findings.\n'
+            printf 'Do NOT write any files. Do NOT call any other tools before posting — the diff below is complete.\n\n'
+            printf '%s\n\n' '---'
+            printf '## Pull Request Context\n\n'
+            printf 'PR: #%s — %s\n' "$PR_NUMBER" "$PR_TITLE"
+            printf 'Base SHA: %s\n' "$BASE_SHA"
+            printf 'Head SHA: %s\n\n' "$HEAD_SHA"
+            printf '## Changed Files\n\n```\n'
+            git diff --stat "$BASE_SHA" "$HEAD_SHA"
+            printf '```\n\n'
+            printf '## Full Diff\n\n```diff\n'
+            DIFF_SIZE=$(git diff "$BASE_SHA" "$HEAD_SHA" | wc -c)
+            if [ "$DIFF_SIZE" -gt 200000 ]; then
+              printf 'Diff too large to inline (%s bytes). Use git diff %s %s -- <file> to inspect specific files.\n' "$DIFF_SIZE" "$BASE_SHA" "$HEAD_SHA"
+            else
+              git diff "$BASE_SHA" "$HEAD_SHA"
+            fi
+            printf '```\n\n'
+            printf 'The diff above is complete.\n\n'
+
+            RESOLVED_COUNT=$(echo "$RESOLVED_THREADS" | jq 'length')
+            if [ "$RESOLVED_COUNT" -gt 0 ]; then
+              printf '%s\n\n' '---'
+              printf '%s\n\n' '## Already resolved — do not re-flag'
+              printf '%s\n\n' 'The PR author has resolved the following review threads. **Do not re-raise any of these issues.** Only flag them again if the diff above shows the exact same problem is still present at a new location.'
+              echo "$RESOLVED_THREADS" | jq -r '.[] | "- `\(.path)` line \(.line // "?"): \(.comments.nodes[0].body | split("\n")[0])"'
+              printf '\n'
+            fi
+
+            printf '%s\n\n' '---'
+            cat .github/CLAUDE_REVIEW.md
+            echo 'REVIEW_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            Review this pull request for a Next.js + NestJS monorepo (Aivora SCM platform).
-            Focus on:
-            - Bugs, logic errors, and edge cases
-            - Security issues (injection, auth bypasses, exposed secrets)
-            - TypeScript type safety
-            - Next.js best practices (server vs client components, dynamic vs static rendering)
-            - NestJS best practices (DTO validation, dependency injection, error handling)
-            - Consistency with existing patterns in the codebase
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: ${{ steps.rules.outputs.prompt }}
+          show_full_output: true
+          # We already hit max-turns=10 in testing with some complex PRs, and increasing it to 15 should give enough buffer for even the most complex reviews to be completed in one run.
+          claude_args: "--max-turns 15"
+          settings: |
+            {
+              "model": "claude-sonnet-4-6",
+              "permissions": {
+                "allow": [
+                  "Bash(gh api repos/mchepuri/aivora/pulls/*)"
+                ]
+              }
+            }
+

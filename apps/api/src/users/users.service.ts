@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SodRulesService } from '../sod-rules/sod-rules.service';
 import { CreateUserDto } from './dto/createUserDto';
 import { UpdateUserDto } from './dto/updateUserDto';
 import { AssignRolesDto } from './dto/assignRolesDto';
@@ -24,7 +25,10 @@ const userWithRoles = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sodRules: SodRulesService,
+  ) {}
 
   findAll(tenantId: string) {
     return this.prisma.user.findMany({
@@ -86,6 +90,17 @@ export class UsersService {
 
   async assignRoles(id: string, tenantId: string, dto: AssignRolesDto) {
     await this.findOne(id, tenantId);
+
+    if (dto.roleIds.length >= 2) {
+      const conflicts = await this.sodRules.validateRoleCombination(tenantId, dto.roleIds);
+      if (conflicts.length > 0) {
+        throw new UnprocessableEntityException({
+          message: 'Role assignment violates Segregation of Duties rules',
+          conflicts,
+        });
+      }
+    }
+
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.userRole.deleteMany({ where: { userId: id, tenantId } });
       if (dto.roleIds.length > 0) {

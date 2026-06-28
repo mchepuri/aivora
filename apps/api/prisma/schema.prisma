@@ -9,13 +9,14 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(cuid())
-  tenantId  String
-  email     String     @unique
-  name      String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  userRoles UserRole[]
+  id           String     @id @default(cuid())
+  tenantId     String
+  email        String     @unique
+  name         String?
+  passwordHash String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  userRoles    UserRole[]
 
   @@map("users")
 }
@@ -29,6 +30,9 @@ model Role {
   updatedAt       DateTime         @updatedAt
   userRoles       UserRole[]
   rolePermissions RolePermission[]
+  approvalLimits  ApprovalLimit[]
+  sodRulesAsRoleA SodRule[]        @relation("SodRuleRoleA")
+  sodRulesAsRoleB SodRule[]        @relation("SodRuleRoleB")
 
   @@unique([tenantId, name])
   @@map("roles")
@@ -64,10 +68,97 @@ model RolePermission {
   id           String     @id @default(cuid())
   roleId       String
   permissionId String
+  /// Attribute-based conditions evaluated at runtime.
+  /// Shape: { "vendorCategory"?: string[], "costCenter"?: string[], "department"?: string[] }
+  conditions   Json?
   createdAt    DateTime   @default(now())
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
+
+/// Maximum monetary amount a role may approve for a given resource type.
+/// Evaluated alongside the RBAC permission check — both must pass.
+model ApprovalLimit {
+  id        String   @id @default(cuid())
+  tenantId  String
+  roleId    String
+  /// e.g. "purchase_order", "payable", "expense_report"
+  resource  String
+  currency  String   @default("USD")
+  maxAmount Decimal  @db.Decimal(19, 4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, roleId, resource, currency])
+  @@map("approval_limits")
+}
+
+/// Segregation-of-Duties rule: a single user must never hold both roleA and roleB simultaneously.
+model SodRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  roleAId     String
+  roleBId     String
+  createdAt   DateTime @default(now())
+  roleA       Role     @relation("SodRuleRoleA", fields: [roleAId], references: [id], onDelete: Cascade)
+  roleB       Role     @relation("SodRuleRoleB", fields: [roleBId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, roleAId, roleBId])
+  @@map("sod_rules")
+}
+
+// ─── Master Data ─────────────────────────────────────────────────────────────
+
+enum UomClass {
+  COUNT
+  WEIGHT
+  VOLUME
+  LENGTH
+  TIME
+}
+
+model UnitOfMeasure {
+  id        String    @id @default(cuid())
+  tenantId  String
+  code      String    @db.VarChar(16)
+  name      String    @db.VarChar(50)
+  uomClass  UomClass
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  createdBy String?
+  updatedAt DateTime  @updatedAt
+  updatedBy String?
+
+  uomConversionsFrom UomConversion[] @relation("FromUom")
+  uomConversionsTo   UomConversion[] @relation("ToUom")
+
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift.
+  @@index([tenantId, code], map: "units_of_measure_code_active_key")
+  @@map("units_of_measure")
+}
+
+model UomConversion {
+  id               String        @id @default(cuid())
+  itemId           String
+  fromUomId        String
+  toUomId          String
+  conversionFactor Decimal       @db.Decimal(18, 8)
+  isDeleted        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  createdBy        String?
+  updatedAt        DateTime      @updatedAt
+  updatedBy        String?
+
+  fromUom UnitOfMeasure @relation("FromUom", fields: [fromUomId], references: [id])
+  toUom   UnitOfMeasure @relation("ToUom", fields: [toUomId], references: [id])
+
+  @@unique([itemId, fromUomId, toUomId])
+  @@map("uom_conversions")
 }

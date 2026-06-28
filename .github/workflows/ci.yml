@@ -38,6 +38,9 @@ jobs:
       - name: Typecheck — api
         run: cd apps/api && npx tsc --noEmit
 
+      - name: Typecheck — api vercel entry
+        run: cd apps/api && npx tsc --project tsconfig.vercel.json
+
       - name: Build — web
         run: npm run build --workspace=apps/web
         env:

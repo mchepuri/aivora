@@ -1,7 +1,7 @@
 import Link from 'next/link';
-
-const fieldClass =
-  'mt-1.5 w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] text-ink shadow-sm outline-none transition focus:border-accent focus:ring-1 focus:ring-accent';
+import { Label } from '@/components/ui/Label';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 export default function RegisterPage() {
   return (
@@ -15,50 +15,38 @@ export default function RegisterPage() {
 
       <form className="mt-8 space-y-4">
         <div>
-          <label htmlFor="name" className="block text-[13px] font-medium text-ink">
-            Full name
-          </label>
-          <input
+          <Label htmlFor="name">Full name</Label>
+          <Input
             id="name"
             name="name"
             type="text"
             autoComplete="name"
             placeholder="Jane Cooper"
-            className={fieldClass}
           />
         </div>
         <div>
-          <label htmlFor="email" className="block text-[13px] font-medium text-ink">
-            Work email
-          </label>
-          <input
+          <Label htmlFor="email">Work email</Label>
+          <Input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             placeholder="you@company.com"
-            className={fieldClass}
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-[13px] font-medium text-ink">
-            Password
-          </label>
-          <input
+          <Label htmlFor="password">Password</Label>
+          <Input
             id="password"
             name="password"
             type="password"
             autoComplete="new-password"
             placeholder="••••••••"
-            className={fieldClass}
           />
         </div>
-        <button
-          type="submit"
-          className="w-full rounded-full bg-ink px-4 py-2.5 text-[15px] font-medium text-white transition hover:bg-ink/85"
-        >
+        <Button type="submit" className="w-full">
           Create account
-        </button>
+        </Button>
       </form>
 
       <p className="mt-6 text-center text-[14px] text-muted">

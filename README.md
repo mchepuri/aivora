@@ -132,6 +132,14 @@ DATABASE_URL="<your-neon-url>" npx prisma migrate deploy --schema=apps/api/prism
 Vercel's own GitHub integration triggers the production deployment **after** the CI
 workflow passes — giving you a basic push-to-prod gate on every merge to `main`.
 
+---
+
+## FAQ
+
+- [How do I connect to the database with a GUI client (TablePlus)?](docs/faq-tableplus-db-connection.md)
+
+---
+
 ### Environment variable summary
 
 | Variable              | Project | Local dev                           | Production                               |
