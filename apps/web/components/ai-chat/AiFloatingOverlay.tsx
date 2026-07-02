@@ -23,7 +23,8 @@ export function AiFloatingOverlay() {
 
   // Scroll to bottom when messages update
   useEffect(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    const id = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    return () => clearTimeout(id);
   }, [messages]);
 
   // Switch to panel mode when message area exceeds 20% of viewport height

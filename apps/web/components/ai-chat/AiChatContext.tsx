@@ -3,6 +3,11 @@
 import { createContext, useCallback, useContext, useState } from 'react';
 import { apiClient } from '@/lib/apiClient';
 
+interface AgentResponse {
+  conversationId: string;
+  reply: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -55,7 +60,7 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
 
       try {
-        const res = await apiClient.post<{ conversationId: string; reply: string }>(
+        const res = await apiClient.post<AgentResponse>(
           '/ai/agent/query',
           { message: text, conversationId },
         );
