@@ -1,15 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import { ChatInput } from './ChatInput';
 import { ChatMessage, Message } from './ChatMessage';
 
-interface ChatResponse {
+interface AgentResponse {
   conversationId: string;
   reply: string;
-  redirect?: string;
 }
 
 let nextId = 1;
@@ -20,11 +18,10 @@ function makeId() {
 const WELCOME: Message = {
   id: '0',
   role: 'assistant',
-  text: "Hi! I'm your Inventory Bot. I can help you create and manage Units of Measure. Try saying \"Create a kilogram UOM\" or \"Show me all UOMs\".",
+  text: "Hi! I'm your AI data agent. Ask me anything about your business data — try \"Show me all UOMs\" or \"How many roles are configured?\".",
 };
 
 export function InventoryBot() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [loading, setLoading] = useState(false);
@@ -42,7 +39,7 @@ export function InventoryBot() {
     scrollToBottom();
 
     try {
-      const res = await apiClient.post<ChatResponse>('/ai/inventory-bot/chat', {
+      const res = await apiClient.post<AgentResponse>('/ai/agent/query', {
         message: text,
         conversationId,
       });
@@ -50,16 +47,11 @@ export function InventoryBot() {
 
       const assistantMsg: Message = { id: makeId(), role: 'assistant', text: res.reply };
       setMessages((prev) => [...prev, assistantMsg]);
-
-      if (res.redirect) {
-        router.push(res.redirect);
-      }
-      router.refresh();
     } catch {
       const errMsg: Message = {
         id: makeId(),
         role: 'assistant',
-        text: 'Something went wrong reaching the bot. Please try again.',
+        text: 'Something went wrong reaching the agent. Please try again.',
       };
       setMessages((prev) => [...prev, errMsg]);
     } finally {
@@ -74,7 +66,7 @@ export function InventoryBot() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white shadow-2xl transition hover:bg-ink/80 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-        aria-label="Open Inventory Bot"
+        aria-label="Open AI Agent"
       >
         {open ? (
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -96,8 +88,8 @@ export function InventoryBot() {
               AI
             </div>
             <div>
-              <p className="text-[13px] font-semibold text-ink">Inventory Bot</p>
-              <p className="text-[11px] text-muted">Powered by Claude</p>
+              <p className="text-[13px] font-semibold text-ink">AI Data Agent</p>
+              <p className="text-[11px] text-muted">Powered by Llama 3.3</p>
             </div>
           </div>
 
@@ -120,7 +112,6 @@ export function InventoryBot() {
           <ChatInput onSend={handleSend} disabled={loading} />
         </div>
       )}
-
     </>
   );
 }
