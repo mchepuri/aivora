@@ -258,10 +258,13 @@ export class QueryAgentService {
     }
 
     if (toolName === 'call_api') {
-      const endpoint = args['endpoint'] as string | undefined;
-      const body = args['body'] as Record<string, unknown> | undefined;
+      const endpoint = typeof args['endpoint'] === 'string' ? args['endpoint'] : undefined;
+      const body =
+        typeof args['body'] === 'object' && args['body'] !== null
+          ? (args['body'] as Record<string, unknown>)
+          : undefined;
       if (!endpoint || !body) {
-        return JSON.stringify({ error: 'call_api requires both "endpoint" and "body".' });
+        return JSON.stringify({ error: 'call_api requires both "endpoint" (string) and "body" (object).' });
       }
       return this.apiCapability.execute(endpoint, body, tenantId);
     }
