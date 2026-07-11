@@ -27,17 +27,21 @@ export class ApiCapabilityService {
             uomClass: { type: 'enum: COUNT | WEIGHT | VOLUME | LENGTH | TIME', required: true },
           },
           handler: async (body, tenantId) => {
+            const raw = String(body['uomClass'] ?? '').toUpperCase();
+            if (!Object.values(UomClass).includes(raw as UomClass)) {
+              throw new Error(
+                `Invalid uomClass "${raw}". Must be one of: ${Object.values(UomClass).join(', ')}.`,
+              );
+            }
             const dto = new CreateUomDto();
             dto.code = String(body['code'] ?? '').toUpperCase().trim();
             dto.name = String(body['name'] ?? '').trim();
-            dto.uomClass = String(body['uomClass'] ?? '') as UomClass;
-            return this.uomService.create(dto, tenantId);
+            dto.uomClass = raw as UomClass;
+            const created = await this.uomService.create(dto, tenantId);
+            return { id: created.id, code: created.code, name: created.name, uomClass: created.uomClass };
           },
         },
       ],
-      // Register new entity operations here as the platform grows:
-      // ['POST /master-data/items', { ... }],
-      // ['POST /purchasing/purchase-orders', { ... }],
     ]);
   }
 
