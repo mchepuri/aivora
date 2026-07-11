@@ -83,8 +83,12 @@ export class SchemaService implements OnModuleInit {
 
     const tables = new Map<string, ColumnRow[]>();
     for (const col of columns) {
-      if (!tables.has(col.table_name)) tables.set(col.table_name, []);
-      tables.get(col.table_name)!.push(col);
+      let colList = tables.get(col.table_name);
+      if (!colList) {
+        colList = [];
+        tables.set(col.table_name, colList);
+      }
+      colList.push(col);
     }
 
     const lines: string[] = ['## Database Schema\n'];

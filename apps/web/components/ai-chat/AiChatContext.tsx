@@ -31,9 +31,8 @@ export function useAiChat() {
   return ctx;
 }
 
-let nextId = 1;
 function makeId() {
-  return String(nextId++);
+  return crypto.randomUUID();
 }
 
 const WELCOME: Message = {
@@ -75,7 +74,7 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
           {
             id: makeId(),
             role: 'assistant',
-            text: 'Something went wrong reaching the agent. Please try again.',
+            text: 'The AI agent couldn\'t be reached. Check your connection and try again.',
             timestamp: new Date(),
           },
         ]);
