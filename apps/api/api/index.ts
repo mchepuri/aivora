@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
+import { resolveLogLevels } from '../src/log-level';
 import express from 'express';
 import type { Request, Response } from 'express';
 
@@ -14,7 +15,7 @@ let bootstrapPromise: Promise<void> | null = null;
 function bootstrap(): Promise<void> {
   if (!bootstrapPromise) {
     bootstrapPromise = NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
-      logger: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['log', 'error', 'warn'],
+      logger: resolveLogLevels(),
     }).then(async (nestApp) => {
       nestApp.setGlobalPrefix('api');
       nestApp.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
