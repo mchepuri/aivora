@@ -59,7 +59,7 @@ const AGENT_TOOLS: ChatCompletionTool[] = [
     function: {
       name: 'call_api',
       description:
-        'Calls a whitelisted API endpoint to create or modify data. Only endpoints listed in the "Available API Operations" section of the system prompt are allowed. Use describe_table first if you need to confirm field names.',
+        'Calls a whitelisted API endpoint to create or modify data. Only endpoints listed in the "Available API Operations" section of the system prompt are allowed. Field names and types are defined there — do not use describe_table for write operations.',
       parameters: {
         type: 'object',
         properties: {
