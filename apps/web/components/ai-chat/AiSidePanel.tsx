@@ -17,7 +17,8 @@ export function AiSidePanel() {
   }, []);
 
   useEffect(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    const id = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    return () => clearTimeout(id);
   }, [messages]);
 
   return (

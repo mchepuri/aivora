@@ -62,7 +62,7 @@ describe('SqlExecutorService', () => {
     it('rejects a query without tenantId', async () => {
       await expect(
         service.execute(`SELECT id FROM units_of_measure WHERE code = 'KG'`, TENANT_ID),
-      ).rejects.toThrow('must include a tenantId filter');
+      ).rejects.toThrow('must include a "tenantId" filter');
     });
 
     it('rejects a query whose tenantId value does not match the authenticated tenant', async () => {

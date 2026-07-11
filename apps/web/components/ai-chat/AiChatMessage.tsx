@@ -17,7 +17,7 @@ export function AiChatMessage({ message }: { message: Message }) {
         }`}
       >
         {message.text.split('\n').map((line, i, arr) => (
-          <span key={i}>
+          <span key={`${message.id}-line-${i}`}>
             {line}
             {i < arr.length - 1 && <br />}
           </span>

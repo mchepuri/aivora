@@ -60,6 +60,7 @@ export function AiSearchBox({ onSend, disabled, className = '' }: AiSearchBoxPro
         <textarea
           ref={textareaRef}
           rows={1}
+          aria-label="Ask AIvora"
           placeholder="Ask AIvora…"
           value={value}
           onChange={(e) => setValue(e.target.value)}
