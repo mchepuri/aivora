@@ -1,24 +1,24 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+// Browser calls use a relative "/api" (NEXT_PUBLIC_API_URL) so the request stays same-origin —
+// next.config.js rewrites it to the real API, which is what lets the httpOnly aivora_token
+// cookie ride along automatically via credentials: 'include'.
+// Server calls (Server Components/Actions) have no page origin, so fetch needs an absolute
+// URL — built from API_ORIGIN — and the cookie has to be attached to the request manually.
+const BROWSER_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+const SERVER_BASE_URL = `${process.env.API_ORIGIN ?? 'http://localhost:3001'}/api`;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    const token = cookieStore.get('aivora_token')?.value;
-    if (token) return { Cookie: `aivora_token=${token}` };
-  } catch {
-    // Not a server context — the browser will send aivora_token via credentials: 'include' below.
-  }
-  return {};
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  const token = cookieStore.get('aivora_token')?.value;
+  return token ? { Cookie: `aivora_token=${token}` } : {};
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const authHeaders = await getAuthHeaders();
+  const isBrowser = typeof window !== 'undefined';
+  const baseUrl = isBrowser ? BROWSER_BASE_URL : SERVER_BASE_URL;
+  const authHeaders = isBrowser ? {} : await getAuthHeaders();
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    // Auth is httpOnly-cookie-based (aivora_token). NEXT_PUBLIC_API_URL is a relative "/api" in
-    // production, so this resolves same-origin and is handled by the rewrite in next.config.js,
-    // which proxies to the real API — this is what keeps the cookie same-origin end to end.
+  const res = await fetch(`${baseUrl}${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...authHeaders },
     ...options,
