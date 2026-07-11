@@ -5,6 +5,7 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
 } from 'openai/resources/chat/completions';
+import { ApiCapabilityService } from './api-capability.service';
 import { SchemaService } from './schema.service';
 import { SqlExecutorService } from './sql-executor.service';
 import { AgentQueryDto } from './dto/agent-query.dto';
@@ -46,10 +47,33 @@ const AGENT_TOOLS: ChatCompletionTool[] = [
         properties: {
           query: {
             type: 'string',
-            description: 'A valid PostgreSQL SELECT statement that includes a tenant_id filter.',
+            description: 'A valid PostgreSQL SELECT statement that includes a "tenantId" filter.',
           },
         },
         required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'call_api',
+      description:
+        'Calls a whitelisted API endpoint to create or modify data. Only endpoints listed in the "Available API Operations" section of the system prompt are allowed. Use describe_table first if you need to confirm field names.',
+      parameters: {
+        type: 'object',
+        properties: {
+          endpoint: {
+            type: 'string',
+            description: 'The endpoint key exactly as listed, e.g. "POST /master-data/uom".',
+          },
+          body: {
+            type: 'object',
+            description: 'Request body fields as defined in the Available API Operations section.',
+            additionalProperties: true,
+          },
+        },
+        required: ['endpoint', 'body'],
       },
     },
   },
@@ -76,6 +100,7 @@ export class QueryAgentService {
   constructor(
     private readonly schema: SchemaService,
     private readonly sqlExecutor: SqlExecutorService,
+    private readonly apiCapability: ApiCapabilityService,
   ) {}
 
   async query(dto: AgentQueryDto, tenantId: string): Promise<AgentResponseDto> {
@@ -112,8 +137,9 @@ export class QueryAgentService {
       'and returning clear natural language answers.',
       '',
       'Agent rules:',
-      '- Only generate SELECT statements. Never INSERT, UPDATE, DELETE, DROP, or ALTER.',
-      `- Every query MUST include: WHERE "tenantId" = '${tenantId}'`,
+      '- For reading data, use execute_sql with SELECT statements only. Never write raw INSERT/UPDATE/DELETE/DROP/ALTER SQL.',
+      '- For write operations, use call_api with an endpoint from the "Available API Operations" section below.',
+      `- Every SELECT query MUST include: WHERE "tenantId" = '${tenantId}'`,
       '- CRITICAL: All column names in this database use camelCase (e.g. "tenantId", "isDeleted",',
       '  "createdAt", "uomClass"). They were created with double-quotes by Prisma, so you MUST',
       '  always double-quote column names in SQL: "tenantId", not tenant_id.',
@@ -127,6 +153,7 @@ export class QueryAgentService {
       '  the answer, explain what is unclear and what the user could try instead.',
       '',
       this.schema.getSnapshot(),
+      this.apiCapability.getCapabilitiesText(),
     ].join('\n');
   }
 
@@ -210,24 +237,33 @@ export class QueryAgentService {
     argsJson: string,
     tenantId: string,
   ): Promise<string> {
-    let args: Record<string, string>;
+    let args: Record<string, unknown>;
     try {
-      args = JSON.parse(argsJson) as Record<string, string>;
+      args = JSON.parse(argsJson) as Record<string, unknown>;
     } catch {
       return JSON.stringify({ error: 'Invalid tool arguments — could not parse JSON.' });
     }
 
     if (toolName === 'describe_table') {
-      return this.schema.describeTable(args['table_name'] ?? '');
+      return this.schema.describeTable(String(args['table_name'] ?? ''));
     }
 
     if (toolName === 'execute_sql') {
       try {
-        const result = await this.sqlExecutor.execute(args['query'] ?? '', tenantId);
+        const result = await this.sqlExecutor.execute(String(args['query'] ?? ''), tenantId);
         return JSON.stringify({ rowCount: result.rowCount, rows: result.rows });
       } catch (err: unknown) {
         return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
       }
+    }
+
+    if (toolName === 'call_api') {
+      const endpoint = args['endpoint'] as string | undefined;
+      const body = args['body'] as Record<string, unknown> | undefined;
+      if (!endpoint || !body) {
+        return JSON.stringify({ error: 'call_api requires both "endpoint" and "body".' });
+      }
+      return this.apiCapability.execute(endpoint, body, tenantId);
     }
 
     return JSON.stringify({ error: `Unknown tool: ${toolName}` });
