@@ -101,7 +101,11 @@ export class QueryAgentService {
     private readonly schema: SchemaService,
     private readonly sqlExecutor: SqlExecutorService,
     private readonly apiCapability: ApiCapabilityService,
-  ) {}
+  ) {
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY environment variable is required');
+    }
+  }
 
   async query(dto: AgentQueryDto, tenantId: string): Promise<AgentResponseDto> {
     const conversationId = dto.conversationId ?? randomUUID();

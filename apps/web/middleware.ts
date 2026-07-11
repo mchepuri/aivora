@@ -20,5 +20,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Excludes Next.js internals and `api/` paths. The `api/` exclusion is
+  // intentional: those paths are server-side proxy handlers that authenticate
+  // via the NestJS JWT guard, not this middleware cookie check.
   matcher: ['/((?!_next/static|_next/image|favicon.ico|api/).*)'],
 };

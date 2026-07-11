@@ -9,7 +9,7 @@ export async function loginAction(
   email: string,
   password: string,
   callbackUrl: string,
-): Promise<{ error: string } | never> {
+): Promise<{ error: string } | void> {
   let data: { accessToken: string } | undefined;
 
   try {

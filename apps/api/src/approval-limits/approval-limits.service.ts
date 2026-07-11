@@ -39,11 +39,11 @@ export class ApprovalLimitsService {
     return limit;
   }
 
-  async create(dto: CreateApprovalLimitDto) {
+  async create(dto: CreateApprovalLimitDto, tenantId: string) {
     try {
       return await this.prisma.approvalLimit.create({
         data: {
-          tenantId: dto.tenantId,
+          tenantId,
           roleId: dto.roleId,
           resource: dto.resource,
           currency: dto.currency ?? 'USD',
@@ -65,20 +65,20 @@ export class ApprovalLimitsService {
   }
 
   async update(id: string, tenantId: string, dto: UpdateApprovalLimitDto) {
-    await this.findOne(id, tenantId);
-    return this.prisma.approvalLimit.update({
-      where: { id },
+    const { count } = await this.prisma.approvalLimit.updateMany({
+      where: { id, tenantId },
       data: {
         ...(dto.currency !== undefined && { currency: dto.currency }),
         ...(dto.maxAmount !== undefined && { maxAmount: new Decimal(dto.maxAmount) }),
       },
-      ...limitWithRole,
     });
+    if (count === 0) throw new NotFoundException(`Approval limit ${id} not found`);
+    return this.findOne(id, tenantId);
   }
 
   async remove(id: string, tenantId: string) {
-    await this.findOne(id, tenantId);
-    return this.prisma.approvalLimit.delete({ where: { id } });
+    const { count } = await this.prisma.approvalLimit.deleteMany({ where: { id, tenantId } });
+    if (count === 0) throw new NotFoundException(`Approval limit ${id} not found`);
   }
 
   /**
