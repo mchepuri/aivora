@@ -41,6 +41,24 @@ describe('SqlExecutorService', () => {
       ).rejects.toThrow('forbidden SQL keyword');
     });
 
+    it('rejects a query containing a SQL line comment (-- injection)', async () => {
+      await expect(
+        service.execute(
+          `SELECT id FROM units_of_measure WHERE "tenantId" = '${TENANT_ID}' -- DROP TABLE users`,
+          TENANT_ID,
+        ),
+      ).rejects.toThrow('forbidden SQL keyword');
+    });
+
+    it('rejects a query containing a SQL block comment (/* */ injection)', async () => {
+      await expect(
+        service.execute(
+          `SELECT id FROM units_of_measure WHERE "tenantId" = '${TENANT_ID}' /* obfuscated */`,
+          TENANT_ID,
+        ),
+      ).rejects.toThrow('forbidden SQL keyword');
+    });
+
     it('rejects a UNION-based cross-tenant bypass attempt', async () => {
       await expect(
         service.execute(
@@ -59,7 +77,7 @@ describe('SqlExecutorService', () => {
       ).rejects.toThrow('forbidden SQL keyword');
     });
 
-    it('rejects a query without tenantId', async () => {
+    it('rejects a query with no tenantId filter', async () => {
       await expect(
         service.execute(`SELECT id FROM units_of_measure WHERE code = 'KG'`, TENANT_ID),
       ).rejects.toThrow('must include a "tenantId" filter');

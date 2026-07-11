@@ -2,10 +2,6 @@ import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateSodRuleDto {
   @IsString()
-  @MaxLength(100)
-  tenantId!: string;
-
-  @IsString()
   @MaxLength(200)
   name!: string;
 

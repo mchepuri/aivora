@@ -7,11 +7,11 @@ import { apiClient } from '@/lib/apiClient';
 import { UomDialog, type Uom } from './UomDialog';
 
 const CLASS_COLOURS: Record<string, string> = {
-  COUNT: 'bg-blue-50 text-blue-700',
-  WEIGHT: 'bg-amber-50 text-amber-700',
-  VOLUME: 'bg-cyan-50 text-cyan-700',
-  LENGTH: 'bg-purple-50 text-purple-700',
-  TIME: 'bg-green-50 text-green-700',
+  COUNT: 'bg-badge-count-bg text-badge-count-fg',
+  WEIGHT: 'bg-badge-weight-bg text-badge-weight-fg',
+  VOLUME: 'bg-badge-volume-bg text-badge-volume-fg',
+  LENGTH: 'bg-badge-length-bg text-badge-length-fg',
+  TIME: 'bg-badge-time-bg text-badge-time-fg',
 };
 
 interface Props {
@@ -23,6 +23,7 @@ export function UomTable({ uoms }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Uom | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function openCreate() {
     router.push('/inventory/units-of-measure/new');
@@ -36,9 +37,12 @@ export function UomTable({ uoms }: Props) {
   async function handleDelete(uom: Uom) {
     if (!confirm(`Delete UOM "${uom.code} — ${uom.name}"? This cannot be undone.`)) return;
     setDeleting(uom.id);
+    setDeleteError(null);
     try {
       await apiClient.delete(`/master-data/uom/${uom.id}`);
       router.refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete UOM. Please try again.');
     } finally {
       setDeleting(null);
     }
@@ -46,6 +50,9 @@ export function UomTable({ uoms }: Props) {
 
   return (
     <>
+      {deleteError && (
+        <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">{deleteError}</p>
+      )}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight text-ink">Units of Measure</h1>
@@ -97,7 +104,7 @@ export function UomTable({ uoms }: Props) {
                       </Button>
                       <Button
                         variant="ghost"
-                        className="text-[13px] text-red-500 hover:bg-red-50 hover:text-red-600"
+                        className="text-[13px] text-danger hover:bg-danger/10"
                         disabled={deleting === uom.id}
                         onClick={() => handleDelete(uom)}
                       >

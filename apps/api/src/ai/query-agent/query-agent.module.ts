@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../../auth/auth.module';
 import { UomModule } from '../../master-data/uom/uom.module';
 import { ApiCapabilityService } from './api-capability.service';
 import { QueryAgentController } from './query-agent.controller';
@@ -7,7 +8,7 @@ import { SchemaService } from './schema.service';
 import { SqlExecutorService } from './sql-executor.service';
 
 @Module({
-  imports: [UomModule],
+  imports: [AuthModule, UomModule],
   controllers: [QueryAgentController],
   providers: [QueryAgentService, SchemaService, SqlExecutorService, ApiCapabilityService],
 })

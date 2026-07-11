@@ -1,52 +1,52 @@
 import {
   Controller, Get, Post, Put, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Param, Body, Request, HttpCode, HttpStatus, UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { SodRulesService } from './sod-rules.service';
 import { CreateSodRuleDto } from './dto/create-sod-rule.dto';
 import { UpdateSodRuleDto } from './dto/update-sod-rule.dto';
 import { ValidateRolesDto } from './dto/validate-roles.dto';
 
 @Controller('sod-rules')
+@UseGuards(JwtAuthGuard)
 export class SodRulesController {
   constructor(private readonly sodRulesService: SodRulesService) {}
 
   @Get()
-  findAll(@Query('tenantId') tenantId: string) {
-    return this.sodRulesService.findAll(tenantId);
+  findAll(@Request() req: { user: JwtPayload }) {
+    return this.sodRulesService.findAll(req.user.tenantId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('tenantId') tenantId: string) {
-    return this.sodRulesService.findOne(id, tenantId);
+  findOne(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.sodRulesService.findOne(id, req.user.tenantId);
   }
 
   @Post()
-  create(@Body() dto: CreateSodRuleDto) {
-    return this.sodRulesService.create(dto);
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() dto: CreateSodRuleDto, @Request() req: { user: JwtPayload }) {
+    return this.sodRulesService.create(dto, req.user.tenantId);
   }
 
-  /**
-   * Validates a set of role IDs against all SoD rules for the tenant.
-   * Returns the list of conflicts (empty array = no violations).
-   */
   @Post('validate')
-  validate(@Body() dto: ValidateRolesDto) {
-    return this.sodRulesService.validateRoleCombination(dto.tenantId, dto.roleIds);
+  validateRoles(@Body() dto: ValidateRolesDto, @Request() req: { user: JwtPayload }) {
+    return this.sodRulesService.validateRoleCombination(req.user.tenantId, dto.roleIds);
   }
 
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Query('tenantId') tenantId: string,
+    @Request() req: { user: JwtPayload },
     @Body() dto: UpdateSodRuleDto,
   ) {
-    return this.sodRulesService.update(id, tenantId, dto);
+    return this.sodRulesService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string, @Query('tenantId') tenantId: string) {
-    return this.sodRulesService.remove(id, tenantId);
+  remove(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.sodRulesService.remove(id, req.user.tenantId);
   }
 }

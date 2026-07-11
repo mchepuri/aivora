@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const FORBIDDEN_RE =
-  /\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|GRANT|REVOKE|CREATE|REPLACE|EXEC|EXECUTE|UNION|INTERSECT|EXCEPT|INTO)\b/i;
+  /\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|GRANT|REVOKE|CREATE|REPLACE|EXEC|EXECUTE|UNION|INTERSECT|EXCEPT|INTO)\b|--|\/\*/i;
 const LIMIT_RE = /\bLIMIT\b/i;
 const MAX_ROWS = 500;
 

@@ -88,7 +88,7 @@ export function UomDialog({ open, onOpenChange, uom, prefill }: Props) {
       <DialogContent>
         <DialogTitle>{isEdit ? 'Edit Unit of Measure' : 'New Unit of Measure'}</DialogTitle>
         <DialogDescription>
-          {isEdit ? `Editing ${uom!.code}` : 'Add a new unit to the master catalog.'}
+          {uom ? `Editing ${uom.code}` : 'Add a new unit to the master catalog.'}
         </DialogDescription>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -133,7 +133,7 @@ export function UomDialog({ open, onOpenChange, uom, prefill }: Props) {
             </select>
           </div>
 
-          {error && <p className="text-[13px] text-red-500">{error}</p>}
+          {error && <p className="text-[13px] text-danger">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
             <DialogClose asChild>
