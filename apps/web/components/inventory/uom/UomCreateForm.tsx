@@ -99,7 +99,7 @@ export function UomCreateForm() {
             </select>
           </div>
 
-          {error && <p className="text-[13px] text-red-500">{error}</p>}
+          {error && <p className="text-[13px] text-danger">{error}</p>}
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={saving}>

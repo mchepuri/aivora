@@ -47,18 +47,16 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, tenantId: string) {
     const { roleIds, ...userData } = dto;
     try {
       return await this.prisma.user.create({
         data: {
           ...userData,
+          tenantId,
           ...(roleIds?.length && {
             userRoles: {
-              create: roleIds.map((roleId) => ({
-                roleId,
-                tenantId: userData.tenantId,
-              })),
+              create: roleIds.map((roleId) => ({ roleId, tenantId })),
             },
           }),
         },
@@ -73,19 +71,16 @@ export class UsersService {
   }
 
   async update(id: string, tenantId: string, dto: UpdateUserDto) {
-    await this.findOne(id, tenantId);
     try {
-      return await this.prisma.user.update({
-        where: { id },
-        data: dto,
-        ...userWithRoles,
-      });
+      const { count } = await this.prisma.user.updateMany({ where: { id, tenantId }, data: dto });
+      if (count === 0) throw new NotFoundException(`User ${id} not found`);
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
         throw new ConflictException('Email already in use');
       }
       throw e;
     }
+    return this.findOne(id, tenantId);
   }
 
   async assignRoles(id: string, tenantId: string, dto: AssignRolesDto) {
@@ -109,15 +104,15 @@ export class UsersService {
           skipDuplicates: true,
         });
       }
-      return tx.user.findUniqueOrThrow({
-        where: { id },
+      return tx.user.findFirstOrThrow({
+        where: { id, tenantId },
         ...userWithRoles,
       });
     });
   }
 
   async remove(id: string, tenantId: string) {
-    await this.findOne(id, tenantId);
-    return this.prisma.user.delete({ where: { id } });
+    const { count } = await this.prisma.user.deleteMany({ where: { id, tenantId } });
+    if (count === 0) throw new NotFoundException(`User ${id} not found`);
   }
 }

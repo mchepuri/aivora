@@ -1,8 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from './strategies/jwt.strategy';
+import type { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +29,26 @@ export class AuthService {
     const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId };
     const accessToken = this.jwt.sign(payload);
 
+    const { passwordHash: _, ...safeUser } = user;
+    return { accessToken, user: safeUser };
+  }
+
+  async register(dto: RegisterDto) {
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const tenantId = randomUUID();
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: { name: dto.name, email: dto.email, passwordHash, tenantId },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('An account with this email already exists');
+      }
+      throw e;
+    }
+    const payload: JwtPayload = { sub: user.id, email: user.email, tenantId: user.tenantId };
+    const accessToken = this.jwt.sign(payload);
     const { passwordHash: _, ...safeUser } = user;
     return { accessToken, user: safeUser };
   }

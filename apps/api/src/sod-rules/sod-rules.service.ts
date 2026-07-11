@@ -46,18 +46,21 @@ export class SodRulesService {
     return rule;
   }
 
-  async create(dto: CreateSodRuleDto) {
+  async create(dto: CreateSodRuleDto, tenantId: string) {
     if (dto.roleAId === dto.roleBId) {
       throw new BadRequestException('roleAId and roleBId must be different roles');
     }
+    // Canonical ordering ensures (A,B) and (B,A) are the same rule and the
+    // unique constraint on [tenantId, roleAId, roleBId] is always satisfied.
+    const [roleAId, roleBId] = [dto.roleAId, dto.roleBId].sort();
     try {
       return await this.prisma.sodRule.create({
         data: {
-          tenantId: dto.tenantId,
+          tenantId,
           name: dto.name,
           description: dto.description,
-          roleAId: dto.roleAId,
-          roleBId: dto.roleBId,
+          roleAId,
+          roleBId,
         },
         ...ruleWithRoles,
       });
@@ -75,17 +78,17 @@ export class SodRulesService {
   }
 
   async update(id: string, tenantId: string, dto: UpdateSodRuleDto) {
-    await this.findOne(id, tenantId);
-    return this.prisma.sodRule.update({
-      where: { id },
-      data: dto,
-      ...ruleWithRoles,
+    const { count } = await this.prisma.sodRule.updateMany({
+      where: { id, tenantId },
+      data: { name: dto.name, description: dto.description },
     });
+    if (count === 0) throw new NotFoundException(`SoD rule ${id} not found`);
+    return this.findOne(id, tenantId);
   }
 
   async remove(id: string, tenantId: string) {
-    await this.findOne(id, tenantId);
-    return this.prisma.sodRule.delete({ where: { id } });
+    const { count } = await this.prisma.sodRule.deleteMany({ where: { id, tenantId } });
+    if (count === 0) throw new NotFoundException(`SoD rule ${id} not found`);
   }
 
   /**
