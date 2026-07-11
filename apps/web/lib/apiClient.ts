@@ -1,5 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
+// aivora_token is an httpOnly cookie scoped to this web app's own domain. In production the API
+// lives on a different domain (e.g. aivora-web.vercel.app vs aivora-api.vercel.app), so a browser
+// request straight to the API would never carry it. Client components therefore go through the
+// same-origin proxy at app/api/proxy/[...path]/route.ts, which runs server-side, reads the cookie,
+// and forwards it to the real API. Server Components/Actions/Route Handlers call the API directly
+// and forward the cookie themselves via getAuthHeaders() below.
+const BROWSER_PROXY_BASE_URL = '/api/proxy';
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const { cookies } = await import('next/headers');
@@ -7,20 +15,17 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     const token = cookieStore.get('aivora_token')?.value;
     if (token) return { Cookie: `aivora_token=${token}` };
   } catch {
-    // Not a server context — the browser will send aivora_token via credentials: 'include' below.
+    // Not a server context — the proxy route (same origin) will read the cookie itself.
   }
   return {};
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const authHeaders = await getAuthHeaders();
+  const isBrowser = typeof window !== 'undefined';
+  const authHeaders = isBrowser ? {} : await getAuthHeaders();
+  const baseUrl = isBrowser ? BROWSER_PROXY_BASE_URL : API_BASE_URL;
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    // Auth is httpOnly-cookie-based (aivora_token). credentials: 'include' is required so the
-    // browser sends that cookie on cross-origin requests (web port 3000 → API port 3001).
-    // The API's CORS config sets credentials: true with an explicit origin allowlist (never *),
-    // which is the required counterpart. CSRF risk is low: all mutating requests require
-    // Content-Type: application/json, which browsers cannot forge in a simple cross-site request.
+  const res = await fetch(`${baseUrl}${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...authHeaders },
     ...options,
