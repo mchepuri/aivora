@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UomService } from '../../master-data/uom/uom.service';
 import { CreateUomDto } from '../../master-data/uom/dto/create-uom.dto';
 import { UomClass } from '@prisma/client';
@@ -13,6 +13,7 @@ interface Capability {
 
 @Injectable()
 export class ApiCapabilityService {
+  private readonly logger = new Logger(ApiCapabilityService.name);
   private readonly registry: Map<string, Capability>;
 
   constructor(private readonly uomService: UomService) {
@@ -61,16 +62,24 @@ export class ApiCapabilityService {
   }
 
   async execute(endpoint: string, body: BodyMap, tenantId: string): Promise<string> {
+    this.logger.debug(
+      `execute() called — endpoint=${endpoint}, tenantId=${tenantId}, body=${JSON.stringify(body)}`,
+    );
+
     const cap = this.registry.get(endpoint);
     if (!cap) {
       const available = [...this.registry.keys()].join(', ');
+      this.logger.debug(`execute(): unknown endpoint "${endpoint}". Available: ${available}`);
       return JSON.stringify({ error: `Unknown endpoint "${endpoint}". Available: ${available}` });
     }
     try {
       const result = await cap.handler(body, tenantId);
+      this.logger.debug(`execute(): ${endpoint} succeeded — result=${JSON.stringify(result)}`);
       return JSON.stringify({ success: true, result });
     } catch (err: unknown) {
-      return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.logger.debug(`execute(): ${endpoint} threw — ${error.message}`, error.stack);
+      return JSON.stringify({ error: error.message });
     }
   }
 }
