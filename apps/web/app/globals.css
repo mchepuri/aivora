@@ -16,18 +16,6 @@
   --color-canvas: #fbfbfd;
   --color-accent: #0071e3;
   --color-danger: #ff3b30;
-
-  /* UOM class badge palette */
-  --color-badge-count-bg: #e8f0fe;
-  --color-badge-count-fg: #1a56db;
-  --color-badge-weight-bg: #fef3c7;
-  --color-badge-weight-fg: #92400e;
-  --color-badge-volume-bg: #e0f2fe;
-  --color-badge-volume-fg: #0369a1;
-  --color-badge-length-bg: #f3e8ff;
-  --color-badge-length-fg: #6d28d9;
-  --color-badge-time-bg: #dcfce7;
-  --color-badge-time-fg: #166534;
 }
 
 html {
