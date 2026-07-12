@@ -32,6 +32,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate --schema=apps/api/prisma/schema.prisma
 
+      - name: Generate Astryx theme
+        run: npm run theme:build --workspace=apps/web
+
       - name: Typecheck — web
         run: cd apps/web && npx tsc --noEmit
 
