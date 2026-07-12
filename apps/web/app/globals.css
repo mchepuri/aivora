@@ -1,4 +1,11 @@
+/* Cascade layer order: declared once, up front, so Tailwind's own
+   theme/base/utilities layers and Astryx's reset/astryx-base layer nest
+   predictably instead of whichever stylesheet happens to load last winning. */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
+
 @import 'tailwindcss';
+@import '@astryxdesign/core/reset.css' layer(reset);
+@import '@astryxdesign/core/astryx.css';
 
 @theme {
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
