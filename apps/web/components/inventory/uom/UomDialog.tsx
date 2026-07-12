@@ -2,26 +2,30 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Dialog } from '@astryxdesign/core/Dialog';
+import { DialogHeader } from '@astryxdesign/core/Dialog';
+import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Selector } from '@astryxdesign/core/Selector';
+import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@/components/ui/Button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { apiClient } from '@/lib/apiClient';
 
 const UOM_CLASSES = ['COUNT', 'WEIGHT', 'VOLUME', 'LENGTH', 'TIME'] as const;
 type UomClass = (typeof UOM_CLASSES)[number];
+
+const UOM_CLASS_OPTIONS = UOM_CLASSES.map((c) => ({
+  value: c,
+  label: c.charAt(0) + c.slice(1).toLowerCase(),
+}));
 
 export interface Uom {
   id: string;
   code: string;
   name: string;
   uomClass: UomClass;
+  // Astryx's Table requires row data to satisfy Record<string, unknown>.
+  [key: string]: unknown;
 }
 
 interface Props {
@@ -84,69 +88,53 @@ export function UomDialog({ open, onOpenChange, uom, prefill }: Props) {
   const isEdit = Boolean(uom);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogTitle>{isEdit ? 'Edit Unit of Measure' : 'New Unit of Measure'}</DialogTitle>
-        <DialogDescription>
-          {uom ? `Editing ${uom.code}` : 'Add a new unit to the master catalog.'}
-        </DialogDescription>
-
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <div>
-            <Label htmlFor="uom-code">Code</Label>
-            <Input
-              id="uom-code"
-              maxLength={16}
-              placeholder="e.g. EA, KG, BOX"
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-              required
+    <Dialog isOpen={open} onOpenChange={onOpenChange}>
+      <form onSubmit={handleSubmit}>
+        <Layout
+          header={
+            <DialogHeader
+              title={isEdit ? 'Edit Unit of Measure' : 'New Unit of Measure'}
+              subtitle={uom ? `Editing ${uom.code}` : 'Add a new unit to the master catalog.'}
+              onOpenChange={onOpenChange}
             />
-          </div>
-
-          <div>
-            <Label htmlFor="uom-name">Name</Label>
-            <Input
-              id="uom-name"
-              maxLength={50}
-              placeholder="e.g. Each, Kilogram, Box"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="uom-class">Class</Label>
-            <select
-              id="uom-class"
-              value={form.uomClass}
-              onChange={(e) => setForm({ ...form, uomClass: e.target.value as UomClass })}
-              className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] text-ink shadow-sm outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
-              required
-            >
-              {UOM_CLASSES.map((c) => (
-                <option key={c} value={c}>
-                  {c.charAt(0) + c.slice(1).toLowerCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {error && <p className="text-[13px] text-danger">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost">
+          }
+          content={
+            <LayoutContent>
+              <TextInput
+                label="Code"
+                placeholder="e.g. EA, KG, BOX"
+                value={form.code}
+                onChange={(value) => setForm({ ...form, code: value.toUpperCase() })}
+                isRequired
+              />
+              <TextInput
+                label="Name"
+                placeholder="e.g. Each, Kilogram, Box"
+                value={form.name}
+                onChange={(value) => setForm({ ...form, name: value })}
+                isRequired
+              />
+              <Selector
+                label="Class"
+                options={UOM_CLASS_OPTIONS}
+                value={form.uomClass}
+                onChange={(value) => setForm({ ...form, uomClass: value as UomClass })}
+              />
+              {error && <Banner status="error" title={error} />}
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter hasDivider>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-            </DialogClose>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create UOM'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create UOM'}
+              </Button>
+            </LayoutFooter>
+          }
+        />
+      </form>
     </Dialog>
   );
 }
