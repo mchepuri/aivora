@@ -110,7 +110,7 @@ model Item {
 
 ### PR 2 — API CRUD `feat: add Item CRUD API endpoints`
 
-**Status:** [ ] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `feature/items-api`
 **Depends on:** PR 1
 
@@ -154,7 +154,7 @@ apps/api/src/master-data/items/
 
 ### PR 3 — Frontend UI `feat: add Item management UI page`
 
-**Status:** [ ] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `feature/items-frontend`
 **Depends on:** PR 2
 
@@ -183,6 +183,8 @@ apps/web/components/inventory/items/
 
 **PR description to use:**
 > Item management page at `/inventory/items`. Server Component fetches and renders the list; base UOM is selected from the existing UOM API. Wired to the API from PR 2 via `apiClient`.
+
+**Also included:** `apps/web/components/AppNav.tsx` — added "Units of Measure" and "Items" links to the top nav. Neither page had a nav entry before this (UOM was only reachable by typing the URL directly); both are added together since they're the only two master-data pages that exist.
 
 ---
 
@@ -228,8 +230,8 @@ PR 4 / PR 5 (Bot — deferred until the UOM bot POC is validated)
 | PR | Title | Status | Branch | PR Link |
 |---|---|---|---|---|
 | PR 1 | DB schema | In Progress | `chore/items-db-schema` | — |
-| PR 2 | API CRUD | Planned | `feature/items-api` | — |
-| PR 3 | FE UI | Planned | `feature/items-frontend` | — |
+| PR 2 | API CRUD | In Progress | `feature/items-api` | — |
+| PR 3 | FE UI | In Progress | `feature/items-frontend` | — |
 | PR 4 | Bot FE | Deferred | `feature/items-bot-frontend` | — |
 | PR 5 | Bot backend | Deferred | `feature/items-bot-backend` | — |
 
