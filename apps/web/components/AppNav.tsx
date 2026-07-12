@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { useEffect, useRef, useTransition } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { TopNav, TopNavHeading, TopNavItem } from '@astryxdesign/core/TopNav';
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
@@ -25,9 +25,25 @@ export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const navRef = useRef<HTMLElement>(null);
+
+  // Publishes the nav's real rendered height as a CSS var so fixed-position
+  // overlays (the AI chat side panel) can sit below it instead of covering
+  // it — Astryx's TopNav sizes itself from content + padding, so there's no
+  // single reliable constant to hard-code here.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      document.documentElement.style.setProperty('--app-nav-height', `${entry.contentRect.height}px`);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <TopNav
+      ref={navRef}
       label="Main navigation"
       heading={<TopNavHeading heading="Aivora" headingHref="/dashboard" />}
       startContent={navLinks.map((link) => (
