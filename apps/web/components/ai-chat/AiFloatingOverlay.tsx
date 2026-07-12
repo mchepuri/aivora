@@ -1,11 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import * as stylex from '@stylexjs/stylex';
+import { ChatComposer } from '@astryxdesign/core/Chat';
 import { useAiChat } from './AiChatContext';
-import { AiSearchBox } from './AiSearchBox';
 import { AiChatMessage, ThinkingIndicator } from './AiChatMessage';
 
 const PANEL_THRESHOLD = 0.2; // switch to panel when message area exceeds 20% of viewport height
+
+// ChatComposer already ships its own card chrome (radius-chat, shadow, white
+// background) — suppressed here since it's embedded inside this file's own
+// drag-handle-topped card, which supplies that chrome for the whole floating
+// unit instead (handle bar + composer read as one piece, not two stacked ones).
+const composerStyles = stylex.create({
+  embedded: {
+    boxShadow: 'none',
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+  },
+});
 
 export function AiFloatingOverlay() {
   const { messages, loading, sendMessage, activatePanelMode } = useAiChat();
@@ -110,10 +123,12 @@ export function AiFloatingOverlay() {
           <div className="h-1 w-8 rounded-full bg-black/15" />
         </div>
 
-        {/* Search box */}
-        <div className="px-4 pb-4 pt-2">
-          <AiSearchBox onSend={sendMessage} disabled={loading} />
-        </div>
+        <ChatComposer
+          xstyle={composerStyles.embedded}
+          onSubmit={sendMessage}
+          isDisabled={loading}
+          placeholder="Ask AIvora…"
+        />
       </div>
     </div>
   );
