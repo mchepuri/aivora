@@ -46,7 +46,7 @@ export function Footer() {
 
         <Divider className="mt-10" />
 
-        <div className="mt-6 flex flex-col items-start justify-between gap-4 text-[12px] text-muted md:flex-row md:items-center">
+        <div className="mt-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <Text type="supporting" color="secondary">
             Copyright © {new Date().getFullYear()} Aivora Inc. All rights reserved.
           </Text>
