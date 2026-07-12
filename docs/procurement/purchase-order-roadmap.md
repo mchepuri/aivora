@@ -58,7 +58,7 @@ Suppliers and Warehouses have no dependency on each other, so they can be built 
 
 | # | Module | Plan doc | Unblocks |
 |---|---|---|---|
-| 1 | **Items** (`items`) | [docs/master-data/items/implementation-plan.md](/docs/master-data/items/implementation-plan.md) — written | PO lines need `item_id` |
+| 1 | **Items** (`items`) | [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) — in progress (PR 1 merged into working branch) | PO lines need `item_id` |
 | 2 | **Suppliers** (`suppliers`) | Not yet written | PO header needs `supplier_id` |
 | 3 | **Warehouses** (`warehouses`) | Not yet written | PO header needs `warehouse_id` (ship-to) |
 | 4 | **Purchase Orders** (`purchase_orders` + `purchase_order_lines`) | Not yet written | Target feature |

@@ -1,7 +1,7 @@
 # Items (Item/Product/SKU Master) — Implementation Plan
 
-**Module:** Master Data
-**Status:** Planned
+**Module:** Master Data → Inventory
+**Status:** In Progress
 **Branch prefix:** `feature/items-`
 **Source:** [Enterprise SCM Architecture Design Document §5.4](/docs/Enterprise_SCM_Architecture_Design_Document.md), [Purchase Order Roadmap](/docs/procurement/purchase-order-roadmap.md)
 
@@ -9,15 +9,15 @@
 
 ## Architecture Reference
 
-The architecture document (§5.4 Master Data) defines `items` with a `base_uom_id` FK into the already-built `units_of_measure` table. This is step 1 of the [roadmap to Purchase Order creation](/docs/procurement/purchase-order-roadmap.md) — `purchase_order_lines.item_id` is a hard NOT NULL blocker until this exists.
+The architecture document (§5.4 Master Data, §4.1 Domain C) defines `items` with a `base_uom_id` FK into the already-built `units_of_measure` table (see [docs/inventory/uom/implementation-plan.md](/docs/inventory/uom/implementation-plan.md)). This is step 1 of the [roadmap to Purchase Order creation](/docs/procurement/purchase-order-roadmap.md) — `purchase_order_lines.item_id` is a hard NOT NULL blocker until this exists.
 
 ### `items` — Item/product/SKU master
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | UUID PK | `gen_random_uuid()` |
-| `tenant_id` | UUID | NOT NULL — multi-tenant isolation (flat field, same pattern as `users`/`roles`, no `companies` table yet) |
-| `sku` | VARCHAR(64) | NOT NULL, UNIQUE (`tenant_id`, `sku`) |
+| `tenant_id` | UUID | NOT NULL — multi-tenant isolation (flat field, same pattern as `users`/`roles`/`units_of_measure`, no `companies` table yet) |
+| `sku` | VARCHAR(64) | NOT NULL — unique per tenant among active rows (partial index, see below) |
 | `name` | VARCHAR(255) | NOT NULL |
 | `base_uom_id` | UUID → units_of_measure | NOT NULL |
 | `item_type` | ENUM | NOT NULL, default `GOODS` — GOODS, SERVICE, ASSET |
@@ -32,11 +32,13 @@ The architecture document (§5.4 Master Data) defines `items` with a `base_uom_i
 | `created_at` / `created_by` | TIMESTAMPTZ / UUID | Standard audit columns |
 | `updated_at` / `updated_by` | TIMESTAMPTZ / UUID | Standard audit columns |
 
-**Deferred from the full §5.4 definition** (not needed to unblock PO creation — see roadmap "Deliberate simplifications"):
+**Uniqueness:** `sku` is enforced unique per `(tenant_id, sku)` via a **partial unique index scoped to `is_deleted = false`** — not a plain `UNIQUE` constraint — so a soft-deleted SKU can be reused and two tenants can independently define the same SKU. This is the exact pattern UOM was corrected to use in migration `20260615000000_fix_uom_code_partial_unique` (`units_of_measure_code_active_key`); Items adopts it from the start instead of needing a follow-up fix migration.
+
+**Deferred from the full §5.4 definition** (not needed to unblock PO creation — see the roadmap's "Deliberate simplifications"):
 - `category_id` → `item_categories` (hierarchy not built yet)
 - `hsn_sac_code` → `hsn_sac_codes` (tax classification not built yet)
 - Item attributes (`item_attributes` / `item_attribute_values`)
-- `uom_conversions` — still blocked on `items` existing; can follow immediately after this PR lands
+- `uom_conversions` relation — the column already exists on `uom_conversions.item_id` from the UOM PRs (unused), and can be wired to a real FK once this table lands
 
 ---
 
@@ -49,9 +51,9 @@ The architecture document (§5.4 Master Data) defines `items` with a `base_uom_i
 
 **Changes:**
 - `apps/api/prisma/schema.prisma` — add `Item` model, `ItemType`, `ValuationMethod`, `ItemStatus` enums; add inverse relation `items Item[]` on `UnitOfMeasure`
-- `apps/api/prisma/migrations/` — generated migration SQL
+- `apps/api/prisma/migrations/20260712000000_add_items/migration.sql` — creates `items`, its enums, the `baseUomId` FK, and the partial unique index
 
-**Prisma models to add:**
+**Prisma model (as implemented):**
 ```prisma
 enum ItemType {
   GOODS
@@ -72,34 +74,37 @@ enum ItemStatus {
 }
 
 model Item {
-  id                String          @id @default(cuid())
-  tenantId          String
-  sku               String          @db.VarChar(64)
-  name              String          @db.VarChar(255)
-  baseUomId         String
-  itemType          ItemType        @default(GOODS)
-  valuationMethod   ValuationMethod @default(FIFO)
-  isBatchTracked    Boolean         @default(false)
-  isSerialTracked   Boolean         @default(false)
-  shelfLifeDays     Int?
-  reorderPoint      Decimal?        @db.Decimal(18, 4)
-  reorderQuantity   Decimal?        @db.Decimal(18, 4)
-  status            ItemStatus      @default(ACTIVE)
-  isDeleted         Boolean         @default(false)
-  createdAt         DateTime        @default(now())
-  createdBy         String?
-  updatedAt         DateTime        @updatedAt
-  updatedBy         String?
+  id              String          @id @default(cuid())
+  tenantId        String
+  sku             String          @db.VarChar(64)
+  name            String          @db.VarChar(255)
+  baseUomId       String
+  itemType        ItemType        @default(GOODS)
+  valuationMethod ValuationMethod @default(FIFO)
+  isBatchTracked  Boolean         @default(false)
+  isSerialTracked Boolean         @default(false)
+  shelfLifeDays   Int?
+  reorderPoint    Decimal?        @db.Decimal(18, 4)
+  reorderQuantity Decimal?        @db.Decimal(18, 4)
+  status          ItemStatus      @default(ACTIVE)
+  isDeleted       Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  createdBy       String?
+  updatedAt       DateTime        @updatedAt
+  updatedBy       String?
 
-  baseUom           UnitOfMeasure   @relation(fields: [baseUomId], references: [id])
+  baseUom UnitOfMeasure @relation(fields: [baseUomId], references: [id])
 
-  @@unique([tenantId, sku])
+  // Partial unique index (tenantId, sku) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as units_of_measure_code_active_key.
+  @@index([tenantId, sku], map: "items_sku_active_key")
   @@map("items")
 }
 ```
 
 **PR description to use:**
-> Adds the `items` table as defined in §5.4 of the Enterprise SCM Architecture Design Document, scoped down to the fields needed to unblock Purchase Order creation (category, HSN/SAC, and attributes deferred — see docs/master-data/items/implementation-plan.md). Schema-only PR — no application logic.
+> Adds the `items` table as defined in §5.4 of the Enterprise SCM Architecture Design Document, scoped down to the fields needed to unblock Purchase Order creation (category, HSN/SAC, and attributes deferred — see docs/inventory/items/implementation-plan.md). Schema-only PR — no application logic.
 
 ---
 
@@ -137,13 +142,13 @@ apps/api/src/master-data/items/
 - `list-items.dto.ts`: `itemType?`, `status?`, `search?`, `page?`, `pageSize?`
 
 **Error mapping:**
-- Prisma `P2002` (unique constraint on `tenantId + sku`) → `409 ConflictException` — "An item with SKU '<sku>' already exists."
+- Prisma `P2002` on the `items_sku_active_key` partial index (duplicate active SKU within a tenant) → `409 ConflictException` — "An item with SKU '<sku>' already exists."
 - Prisma `P2025` (record not found) → `404 NotFoundException`
 - Prisma `P2003` (FK violation on `baseUomId`) → `400 BadRequestException` — "baseUomId '<id>' does not reference an existing unit of measure."
 - Read `tenantId` from the verified JWT, never from the request body.
 
 **PR description to use:**
-> Implements the Items master data CRUD API (§5.4). Follows the existing NestJS module structure (controller → service → Prisma), same as `master-data/uom`. Duplicate SKU within a tenant returns 409; invalid `baseUomId` returns 400; missing record returns 404.
+> Implements the Items master data CRUD API (§5.4). Follows the existing NestJS module structure (controller → service → Prisma), same as `master-data/uom`. Duplicate active SKU within a tenant returns 409; invalid `baseUomId` returns 400; missing record returns 404.
 
 ---
 
@@ -181,19 +186,40 @@ apps/web/components/inventory/items/
 
 ---
 
+### PR 4 — Chatbot Frontend `feat: add Item Bot chat UI` *(deferred — see Notes)*
+
+**Status:** [ ] Deferred
+**Branch:** `feature/items-bot-frontend`
+**Depends on:** PR 3
+
+Not currently planned. UOM's Inventory Bot (§15 Phase 8) is being kept as a single proof-of-concept before the conversational pattern is replicated across every master-data module. If/when it's validated, this would follow the exact shape of [UOM PR 4](/docs/inventory/uom/implementation-plan.md): a floating chat widget calling `POST /api/v1/ai/items-bot/chat`, with a stub reply until the backend (PR 5 below) exists.
+
+---
+
+### PR 5 — Bot Backend `feat: add item bot backend with Claude-powered intent parsing` *(deferred — see Notes)*
+
+**Status:** [ ] Deferred
+**Branch:** `feature/items-bot-backend`
+**Depends on:** PR 2
+
+Not currently planned, for the same reason as PR 4. Would mirror [UOM PR 5](/docs/inventory/uom/implementation-plan.md): Claude-powered `CREATE_ITEM` / `LIST_ITEMS` / `QUERY_ITEM` intent parsing, all mutations routed through `ItemsService` (never direct DB access from the AI layer), human-in-the-loop confirmation before create.
+
+---
+
 ## Execution Order
 
 ```
-PR 1 (DB schema)
+PR 1 (DB schema)  ✅ in progress
     │
     ▼
 PR 2 (API)
     │
     ▼
 PR 3 (FE list/create/edit UI)
+    │
+    ▼
+PR 4 / PR 5 (Bot — deferred until the UOM bot POC is validated)
 ```
-
-No chatbot PRs are planned for Items yet (unlike the UOM plan's PR 4/5) — the conversational interface pattern is being kept as a UOM-only proof of concept until it's validated; it can be layered onto Items later without changing this schema or API.
 
 ---
 
@@ -204,11 +230,14 @@ No chatbot PRs are planned for Items yet (unlike the UOM plan's PR 4/5) — the 
 | PR 1 | DB schema | In Progress | `chore/items-db-schema` | — |
 | PR 2 | API CRUD | Planned | `feature/items-api` | — |
 | PR 3 | FE UI | Planned | `feature/items-frontend` | — |
+| PR 4 | Bot FE | Deferred | `feature/items-bot-frontend` | — |
+| PR 5 | Bot backend | Deferred | `feature/items-bot-backend` | — |
 
 ---
 
 ## Notes
 
 - `category_id`, `hsn_sac_code`, and item attributes are **not** implemented in these PRs — each requires a table that doesn't exist yet (`item_categories`, `hsn_sac_codes`, `item_attributes`) and none of them block Purchase Order creation. Tracked separately.
-- `uom_conversions` (already in the Prisma schema from the UOM PRs but unused) can now be wired up once this PR lands, since it requires `item_id` — that's a natural follow-up, not a blocker for POs.
+- `uom_conversions` (already in the Prisma schema from the UOM PRs but unused) can now be wired up once PR 1 lands, since it requires `item_id` — that's a natural follow-up, not a blocker for POs.
+- The Item Bot (PR 4/5) is intentionally deferred — the conversational/agentic pattern is a UOM-only proof of concept for now (§15 Phase 8) and can be layered onto Items later without changing this schema or API.
 - After Items, the roadmap proceeds to **Suppliers** and **Warehouses** in parallel — see [docs/procurement/purchase-order-roadmap.md](/docs/procurement/purchase-order-roadmap.md).
