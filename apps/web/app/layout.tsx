@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import NextLink from 'next/link';
 import { Theme } from '@astryxdesign/core/theme';
+import { LinkProvider } from '@astryxdesign/core/Link';
 import { appleTheme } from '../theme/apple';
 import './globals.css';
 
@@ -19,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={inter.variable} data-theme="light">
       <body className="font-sans antialiased">
         <Theme theme={appleTheme} mode="light">
-          {children}
+          <LinkProvider component={NextLink}>{children}</LinkProvider>
         </Theme>
       </body>
     </html>

@@ -1,66 +1,66 @@
 'use client';
 
-import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/Avatar';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/DropdownMenu';
+import * as stylex from '@stylexjs/stylex';
+import { TopNav, TopNavHeading, TopNavItem } from '@astryxdesign/core/TopNav';
+import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
+import { DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { Divider } from '@astryxdesign/core/Divider';
+import { Text } from '@astryxdesign/core/Text';
 import { logoutAction } from '@/app/(public)/login/actions';
 
 const navLinks = [{ href: '/users', label: 'Users' }];
 
+// The avatar trigger button is icon-only + ghost, but should stay a full
+// circle (matching the round Avatar inside it) rather than the theme's
+// default 12px element radius.
+const styles = stylex.create({
+  round: { borderRadius: 'var(--radius-full)' },
+  sectionLabel: { paddingInline: 'var(--spacing-3)', paddingBlock: 'var(--spacing-1)' },
+});
+
 export function AppNav() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [, startTransition] = useTransition();
 
   return (
-    <header className="border-b border-black/5 bg-white">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="text-[17px] font-semibold tracking-tight text-ink">
-            Aivora
-          </Link>
-          <nav className="flex items-center gap-6 text-[13px] text-ink/80">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="transition hover:text-ink">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="rounded-full outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
-              <Avatar>
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator className="my-1 h-px bg-black/5" />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">Profile</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings">Settings</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="my-1 h-px bg-black/5" />
-            <DropdownMenuItem
-              className="cursor-pointer text-red-500 focus:bg-red-50 focus:text-red-500"
-              onSelect={() => startTransition(() => { void logoutAction(); })}
-            >
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
+    <TopNav
+      label="Main navigation"
+      heading={<TopNavHeading heading="Aivora" headingHref="/dashboard" />}
+      startContent={navLinks.map((link) => (
+        <TopNavItem
+          key={link.href}
+          label={link.label}
+          href={link.href}
+          isSelected={pathname === link.href}
+        />
+      ))}
+      endContent={
+        <DropdownMenu
+          button={{
+            label: 'My account',
+            isIconOnly: true,
+            variant: 'ghost',
+            icon: <Avatar name="U" size="small" />,
+            xstyle: styles.round,
+          }}
+        >
+          <Text type="supporting" color="secondary" xstyle={styles.sectionLabel}>
+            My Account
+          </Text>
+          <DropdownMenuItem label="Profile" onClick={() => router.push('/profile')} />
+          <DropdownMenuItem label="Settings" onClick={() => router.push('/settings')} />
+          <Divider />
+          <DropdownMenuItem
+            label="Log out"
+            className="text-danger"
+            onClick={() => startTransition(() => { void logoutAction(); })}
+          />
         </DropdownMenu>
-      </div>
-    </header>
+      }
+    />
   );
 }

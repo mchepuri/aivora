@@ -1,4 +1,8 @@
-import Link from 'next/link';
+import { Section } from '@astryxdesign/core/Section';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Text } from '@astryxdesign/core/Text';
+import { Link } from '@astryxdesign/core/Link';
+import { Divider } from '@astryxdesign/core/Divider';
 
 const columns = [
   {
@@ -21,40 +25,44 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-black/5 bg-canvas">
+    <Section variant="transparent" dividers={['top']}>
       <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-4">
+        <Grid columns={{ minWidth: 140, max: 4 }} gap={8}>
           {columns.map((column) => (
             <div key={column.title}>
-              <h3 className="text-[12px] font-semibold text-ink">{column.title}</h3>
-              <ul className="mt-3 space-y-2">
+              <Text type="label" weight="semibold">
+                {column.title}
+              </Text>
+              <div className="mt-3 flex flex-col gap-2">
                 {column.links.map((link) => (
-                  <li key={link}>
-                    <Link href="#" className="text-[12px] text-muted transition hover:text-ink">
-                      {link}
-                    </Link>
-                  </li>
+                  <Link key={link} href="#" type="supporting" color="secondary">
+                    {link}
+                  </Link>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
-        </div>
+        </Grid>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-black/5 pt-6 text-[12px] text-muted md:flex-row md:items-center">
-          <p>Copyright © {new Date().getFullYear()} Aivora Inc. All rights reserved.</p>
+        <Divider className="mt-10" />
+
+        <div className="mt-6 flex flex-col items-start justify-between gap-4 text-[12px] text-muted md:flex-row md:items-center">
+          <Text type="supporting" color="secondary">
+            Copyright © {new Date().getFullYear()} Aivora Inc. All rights reserved.
+          </Text>
           <div className="flex gap-6">
-            <Link href="#" className="transition hover:text-ink">
+            <Link href="#" type="supporting" color="secondary">
               Privacy Policy
             </Link>
-            <Link href="#" className="transition hover:text-ink">
+            <Link href="#" type="supporting" color="secondary">
               Terms of Use
             </Link>
-            <Link href="#" className="transition hover:text-ink">
+            <Link href="#" type="supporting" color="secondary">
               Sitemap
             </Link>
           </div>
         </div>
       </div>
-    </footer>
+    </Section>
   );
 }
