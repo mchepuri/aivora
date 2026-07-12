@@ -1,15 +1,24 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Card } from '@astryxdesign/core/Card';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Link } from '@astryxdesign/core/Link';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Selector } from '@astryxdesign/core/Selector';
+import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { apiClient } from '@/lib/apiClient';
 
 const UOM_CLASSES = ['COUNT', 'WEIGHT', 'VOLUME', 'LENGTH', 'TIME'] as const;
 type UomClass = (typeof UOM_CLASSES)[number];
+
+const UOM_CLASS_OPTIONS = UOM_CLASSES.map((c) => ({
+  value: c,
+  label: c.charAt(0) + c.slice(1).toLowerCase(),
+}));
 
 interface FormState {
   code: string;
@@ -43,76 +52,57 @@ export function UomCreateForm() {
   return (
     <div className="max-w-lg">
       <div className="mb-8">
-        <Link
-          href="/inventory/units-of-measure"
-          className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-muted transition hover:text-ink"
-        >
+        <Link href="/inventory/units-of-measure" className="mb-4 inline-flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-            <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M9 11L5 7l4-4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           Units of Measure
         </Link>
-        <h1 className="text-[28px] font-semibold tracking-tight text-ink">New Unit of Measure</h1>
-        <p className="mt-1 text-[15px] text-muted">Add a new unit to the master catalog.</p>
+        <Heading level={1}>New Unit of Measure</Heading>
+        <Text color="secondary">Add a new unit to the master catalog.</Text>
       </div>
 
-      <div className="rounded-2xl border border-black/5 bg-white p-8 shadow-sm">
+      <Card padding={8}>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Label htmlFor="uom-code">Code</Label>
-            <Input
-              id="uom-code"
-              maxLength={16}
-              placeholder="e.g. EA, KG, BOX"
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-              required
-            />
-          </div>
+          <TextInput
+            label="Code"
+            placeholder="e.g. EA, KG, BOX"
+            value={form.code}
+            onChange={(value) => setForm({ ...form, code: value.toUpperCase() })}
+            isRequired
+          />
+          <TextInput
+            label="Name"
+            placeholder="e.g. Each, Kilogram, Box"
+            value={form.name}
+            onChange={(value) => setForm({ ...form, name: value })}
+            isRequired
+          />
+          <Selector
+            label="Class"
+            options={UOM_CLASS_OPTIONS}
+            value={form.uomClass}
+            onChange={(value) => setForm({ ...form, uomClass: value as UomClass })}
+          />
 
-          <div>
-            <Label htmlFor="uom-name">Name</Label>
-            <Input
-              id="uom-name"
-              maxLength={50}
-              placeholder="e.g. Each, Kilogram, Box"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="uom-class">Class</Label>
-            <select
-              id="uom-class"
-              value={form.uomClass}
-              onChange={(e) => setForm({ ...form, uomClass: e.target.value as UomClass })}
-              className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] text-ink shadow-sm outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
-              required
-            >
-              {UOM_CLASSES.map((c) => (
-                <option key={c} value={c}>
-                  {c.charAt(0) + c.slice(1).toLowerCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {error && <p className="text-[13px] text-danger">{error}</p>}
+          {error && <Banner status="error" title={error} />}
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={saving}>
               {saving ? 'Creating…' : 'Create UOM'}
             </Button>
-            <Link href="/inventory/units-of-measure">
-              <Button type="button" variant="ghost">
-                Cancel
-              </Button>
-            </Link>
+            <Button type="button" variant="ghost" href="/inventory/units-of-measure">
+              Cancel
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
