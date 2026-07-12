@@ -1,5 +1,4 @@
-'use client';
-
+import { ChatMessage, ChatMessageBubble, ChatMessageMetadata } from '@astryxdesign/core/Chat';
 import { Message } from './AiChatContext';
 
 function formatTime(date: Date): string {
@@ -7,45 +6,31 @@ function formatTime(date: Date): string {
 }
 
 export function AiChatMessage({ message }: { message: Message }) {
-  const isUser = message.role === 'user';
-
   return (
-    <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-          isUser ? 'bg-ink text-white' : 'bg-black/5 text-ink'
-        }`}
+    <ChatMessage sender={message.role}>
+      <ChatMessageBubble
+        className="whitespace-pre-wrap"
+        metadata={<ChatMessageMetadata timestamp={formatTime(message.timestamp)} />}
       >
-        {message.text.split('\n').map((line, i, arr) => (
-          <span key={`${message.id}-line-${i}`}>
-            {line}
-            {i < arr.length - 1 && <br />}
-          </span>
-        ))}
-      </div>
-      <span className="shrink-0 text-[10px] text-muted">{formatTime(message.timestamp)}</span>
-    </div>
+        {message.text}
+      </ChatMessageBubble>
+    </ChatMessage>
   );
 }
 
 export function ThinkingIndicator() {
   return (
-    <div className="flex items-center gap-2 text-[13px] text-muted">
-      <span className="inline-flex gap-0.5">
-        <span
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30"
-          style={{ animationDelay: '0ms' }}
-        />
-        <span
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30"
-          style={{ animationDelay: '150ms' }}
-        />
-        <span
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30"
-          style={{ animationDelay: '300ms' }}
-        />
-      </span>
-      Thinking…
-    </div>
+    <ChatMessage sender="assistant">
+      <ChatMessageBubble variant="ghost">
+        <span className="inline-flex items-center gap-2 text-[13px] text-muted">
+          <span className="inline-flex gap-0.5">
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '0ms' }} />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '150ms' }} />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '300ms' }} />
+          </span>
+          Thinking…
+        </span>
+      </ChatMessageBubble>
+    </ChatMessage>
   );
 }
