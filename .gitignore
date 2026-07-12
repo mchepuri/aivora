@@ -26,6 +26,12 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Astryx generated theme build output (source: apps/web/theme/*.theme.ts)
+apps/web/theme/apple.css
+apps/web/theme/apple.js
+apps/web/theme/apple.d.ts
+apps/web/theme/apple.variants.d.ts
+
 # Logs
 *.log
 npm-debug.log*
