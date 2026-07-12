@@ -19,8 +19,11 @@ interface AiChatContextValue {
   messages: Message[];
   loading: boolean;
   isPanelMode: boolean;
+  isCollapsed: boolean;
   sendMessage: (text: string) => Promise<void>;
   activatePanelMode: () => void;
+  collapseChat: () => void;
+  expandChat: () => void;
 }
 
 const AiChatContext = createContext<AiChatContextValue | null>(null);
@@ -47,8 +50,11 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [isPanelMode, setIsPanelMode] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const activatePanelMode = useCallback(() => setIsPanelMode(true), []);
+  const collapseChat = useCallback(() => setIsCollapsed(true), []);
+  const expandChat = useCallback(() => setIsCollapsed(false), []);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -86,7 +92,18 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AiChatContext.Provider value={{ messages, loading, isPanelMode, sendMessage, activatePanelMode }}>
+    <AiChatContext.Provider
+      value={{
+        messages,
+        loading,
+        isPanelMode,
+        isCollapsed,
+        sendMessage,
+        activatePanelMode,
+        collapseChat,
+        expandChat,
+      }}
+    >
       {children}
     </AiChatContext.Provider>
   );
