@@ -1,6 +1,9 @@
 {
   "name": "@aivora/web",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "theme:build": "astryx theme build theme/apple.theme.ts -o theme/apple.css",
     "predev": "npm run theme:build",
