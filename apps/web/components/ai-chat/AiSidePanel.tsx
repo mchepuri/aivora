@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ChatLayout, ChatMessageList, ChatComposer } from '@astryxdesign/core/Chat';
+import { Text } from '@astryxdesign/core/Text';
 import { useAiChat } from './AiChatContext';
 import { AiChatMessage, ThinkingIndicator } from './AiChatMessage';
 
@@ -30,8 +31,10 @@ export function AiSidePanel() {
           </svg>
         </div>
         <div>
-          <p className="text-[13px] font-semibold text-ink">AIvora</p>
-          <p className="text-[11px] text-muted">AI Data Agent</p>
+          <Text weight="semibold">AIvora</Text>
+          <Text type="supporting" color="secondary">
+            AI Data Agent
+          </Text>
         </div>
       </div>
 
