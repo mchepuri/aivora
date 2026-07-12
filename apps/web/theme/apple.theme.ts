@@ -58,6 +58,15 @@ export const appleTheme = defineTheme({
     '--radius-container': '16px',
     // Inputs and non-pill buttons: rounded-xl (12px).
     '--radius-element': '12px',
+
+    // The type scale (base 15, ratio 1.2 above) is tuned for compact app UI,
+    // so the generated --text-display-1-size lands around 45px — too small
+    // for a marketing hero headline. Overridden here, and only here: a fluid
+    // clamp() spanning the same 48px-72px range the landing page's hero used
+    // before migration (text-5xl sm:text-6xl md:text-7xl), so <Heading
+    // level={1} type="display-1"> reads the way the hero always has instead
+    // of shrinking to the app-UI scale.
+    '--text-display-1-size': 'clamp(3rem, 2rem + 4vw, 4.5rem)',
   },
 
   components: {
