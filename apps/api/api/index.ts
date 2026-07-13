@@ -4,6 +4,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import { resolveLogLevels } from '../src/log-level';
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import type { Request, Response } from 'express';
 
@@ -18,6 +19,7 @@ function bootstrap(): Promise<void> {
       logger: resolveLogLevels(),
     }).then(async (nestApp) => {
       nestApp.setGlobalPrefix('api');
+      nestApp.use(cookieParser());
       nestApp.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
       nestApp.enableCors({
         origin: process.env.WEB_URL ?? '*',

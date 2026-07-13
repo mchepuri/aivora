@@ -137,6 +137,7 @@ model UnitOfMeasure {
 
   uomConversionsFrom UomConversion[] @relation("FromUom")
   uomConversionsTo   UomConversion[] @relation("ToUom")
+  items              Item[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift.
@@ -161,4 +162,51 @@ model UomConversion {
 
   @@unique([itemId, fromUomId, toUomId])
   @@map("uom_conversions")
+}
+
+enum ItemType {
+  GOODS
+  SERVICE
+  ASSET
+}
+
+enum ValuationMethod {
+  FIFO
+  LIFO
+  WEIGHTED_AVG
+}
+
+enum ItemStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+model Item {
+  id              String          @id @default(cuid())
+  tenantId        String
+  sku             String          @db.VarChar(64)
+  name            String          @db.VarChar(255)
+  baseUomId       String
+  itemType        ItemType        @default(GOODS)
+  valuationMethod ValuationMethod @default(FIFO)
+  isBatchTracked  Boolean         @default(false)
+  isSerialTracked Boolean         @default(false)
+  shelfLifeDays   Int?
+  reorderPoint    Decimal?        @db.Decimal(18, 4)
+  reorderQuantity Decimal?        @db.Decimal(18, 4)
+  status          ItemStatus      @default(ACTIVE)
+  isDeleted       Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  createdBy       String?
+  updatedAt       DateTime        @updatedAt
+  updatedBy       String?
+
+  baseUom UnitOfMeasure @relation(fields: [baseUomId], references: [id])
+
+  // Partial unique index (tenantId, sku) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as units_of_measure_code_active_key.
+  @@index([tenantId, sku], map: "items_sku_active_key")
+  @@map("items")
 }

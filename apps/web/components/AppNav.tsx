@@ -11,7 +11,11 @@ import { Divider } from '@astryxdesign/core/Divider';
 import { Text } from '@astryxdesign/core/Text';
 import { logoutAction } from '@/app/(public)/login/actions';
 
-const navLinks = [{ href: '/users', label: 'Users' }];
+const navLinks = [
+  { href: '/inventory/units-of-measure', label: 'Units of Measure' },
+  { href: '/inventory/items', label: 'Items' },
+  { href: '/users', label: 'Users' },
+];
 
 // The avatar trigger button is icon-only + ghost, but should stay a full
 // circle (matching the round Avatar inside it) rather than the theme's
