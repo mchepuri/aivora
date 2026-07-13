@@ -5,7 +5,10 @@ import { UpdateUomDto } from '../../master-data/uom/dto/update-uom.dto';
 import { ItemsService } from '../../master-data/items/items.service';
 import { CreateItemDto } from '../../master-data/items/dto/create-item.dto';
 import { UpdateItemDto } from '../../master-data/items/dto/update-item.dto';
-import { ItemStatus, ItemType, UomClass, ValuationMethod } from '@prisma/client';
+import { SuppliersService } from '../../master-data/suppliers/suppliers.service';
+import { CreateSupplierDto } from '../../master-data/suppliers/dto/create-supplier.dto';
+import { UpdateSupplierDto } from '../../master-data/suppliers/dto/update-supplier.dto';
+import { ItemStatus, ItemType, SupplierStatus, UomClass, ValuationMethod } from '@prisma/client';
 
 type BodyMap = Record<string, unknown>;
 
@@ -71,6 +74,7 @@ const UOM_CLASSES = Object.values(UomClass);
 const ITEM_TYPES = Object.values(ItemType);
 const VALUATION_METHODS = Object.values(ValuationMethod);
 const ITEM_STATUSES = Object.values(ItemStatus);
+const SUPPLIER_STATUSES = Object.values(SupplierStatus);
 
 const UOM_SHAPE = ['id', 'code', 'name', 'uomClass'] as const;
 const ITEM_SHAPE = [
@@ -85,6 +89,14 @@ const ITEM_SHAPE = [
   'shelfLifeDays',
   'reorderPoint',
   'reorderQuantity',
+  'status',
+] as const;
+const SUPPLIER_SHAPE = [
+  'id',
+  'code',
+  'legalName',
+  'defaultCurrency',
+  'ratingScore',
   'status',
 ] as const;
 
@@ -102,6 +114,7 @@ export class ApiCapabilityService {
   constructor(
     private readonly uomService: UomService,
     private readonly itemsService: ItemsService,
+    private readonly suppliersService: SuppliersService,
   ) {
     this.registry = new Map<string, Capability>([
       [
@@ -257,6 +270,70 @@ export class ApiCapabilityService {
           handler: async (body, tenantId) => {
             const id = requireId(body);
             await this.itemsService.remove(id, tenantId);
+            return { id, deleted: true };
+          },
+        },
+      ],
+      [
+        'POST /master-data/suppliers',
+        {
+          description: 'Create a new Supplier in the vendor master',
+          fields: {
+            code: { type: 'string, max 32 chars, uppercase', required: true },
+            legalName: { type: 'string, max 255 chars', required: true },
+            defaultCurrency: { type: 'string, 3-letter currency code, uppercase (default USD)', required: false },
+            status: { type: 'enum: PENDING_APPROVAL | ACTIVE | BLOCKED (default PENDING_APPROVAL)', required: false },
+          },
+          handler: async (body, tenantId) => {
+            const dto = new CreateSupplierDto();
+            dto.code = requireString(body, 'code').toUpperCase();
+            dto.legalName = requireString(body, 'legalName');
+            if (body['defaultCurrency'] !== undefined) {
+              dto.defaultCurrency = requireString(body, 'defaultCurrency').toUpperCase();
+            }
+            const status = parseEnum(body, 'status', SUPPLIER_STATUSES);
+            if (status !== undefined) dto.status = status;
+            const created = await this.suppliersService.create(dto, tenantId);
+            return shape(created, SUPPLIER_SHAPE);
+          },
+        },
+      ],
+      [
+        'PATCH /master-data/suppliers/:id',
+        {
+          description: 'Update an existing Supplier. Only include the fields you want to change.',
+          fields: {
+            id: { type: 'string (Supplier id)', required: true },
+            code: { type: 'string, max 32 chars, uppercase', required: false },
+            legalName: { type: 'string, max 255 chars', required: false },
+            defaultCurrency: { type: 'string, 3-letter currency code, uppercase', required: false },
+            status: { type: 'enum: PENDING_APPROVAL | ACTIVE | BLOCKED', required: false },
+          },
+          handler: async (body, tenantId) => {
+            const id = requireId(body);
+            const dto = new UpdateSupplierDto();
+            if (body['code'] !== undefined) dto.code = requireString(body, 'code').toUpperCase();
+            if (body['legalName'] !== undefined) dto.legalName = requireString(body, 'legalName');
+            if (body['defaultCurrency'] !== undefined) {
+              dto.defaultCurrency = requireString(body, 'defaultCurrency').toUpperCase();
+            }
+            const status = parseEnum(body, 'status', SUPPLIER_STATUSES);
+            if (status !== undefined) dto.status = status;
+            const updated = await this.suppliersService.update(id, tenantId, dto);
+            return shape(updated, SUPPLIER_SHAPE);
+          },
+        },
+      ],
+      [
+        'DELETE /master-data/suppliers/:id',
+        {
+          description: 'Soft-delete a Supplier by id.',
+          fields: {
+            id: { type: 'string (Supplier id)', required: true },
+          },
+          handler: async (body, tenantId) => {
+            const id = requireId(body);
+            await this.suppliersService.remove(id, tenantId);
             return { id, deleted: true };
           },
         },

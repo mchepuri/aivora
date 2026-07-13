@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { ItemStatus, ItemType, UomClass, ValuationMethod } from '@prisma/client';
+import { ItemStatus, ItemType, SupplierStatus, UomClass, ValuationMethod } from '@prisma/client';
 import { ApiCapabilityService } from './api-capability.service';
 import { UomService } from '../../master-data/uom/uom.service';
 import { ItemsService } from '../../master-data/items/items.service';
+import { SuppliersService } from '../../master-data/suppliers/suppliers.service';
 
 const TENANT = 'tenant-abc-123';
 
@@ -42,20 +43,38 @@ const MOCK_ITEM = {
   baseUom: MOCK_UOM,
 };
 
+const MOCK_SUPPLIER = {
+  id: 'supplier-1',
+  code: 'ACME-01',
+  legalName: 'Acme Supply Co.',
+  defaultCurrency: 'USD',
+  ratingScore: null,
+  status: SupplierStatus.PENDING_APPROVAL,
+  tenantId: TENANT,
+  isDeleted: false,
+  createdAt: new Date(),
+  createdBy: null,
+  updatedAt: new Date(),
+  updatedBy: null,
+};
+
 describe('ApiCapabilityService', () => {
   let service: ApiCapabilityService;
   let uomService: jest.Mocked<Pick<UomService, 'create' | 'update' | 'remove'>>;
   let itemsService: jest.Mocked<Pick<ItemsService, 'create' | 'update' | 'remove'>>;
+  let suppliersService: jest.Mocked<Pick<SuppliersService, 'create' | 'update' | 'remove'>>;
 
   beforeEach(async () => {
     uomService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     itemsService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
+    suppliersService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApiCapabilityService,
         { provide: UomService, useValue: uomService },
         { provide: ItemsService, useValue: itemsService },
+        { provide: SuppliersService, useValue: suppliersService },
       ],
     }).compile();
 
@@ -349,6 +368,137 @@ describe('ApiCapabilityService', () => {
 
       expect(result.error).toMatch(/id is required/);
       expect(itemsService.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — POST /master-data/suppliers', () => {
+    it('creates a supplier and returns only the shaped public fields', async () => {
+      suppliersService.create.mockResolvedValue(MOCK_SUPPLIER);
+
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/suppliers',
+          { code: 'acme-01', legalName: 'Acme Supply Co.' },
+          TENANT,
+        ),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(result.result).toEqual({
+        id: 'supplier-1',
+        code: 'ACME-01',
+        legalName: 'Acme Supply Co.',
+        defaultCurrency: 'USD',
+        ratingScore: null,
+        status: SupplierStatus.PENDING_APPROVAL,
+      });
+      expect(result.result).not.toHaveProperty('tenantId');
+      expect(result.result).not.toHaveProperty('isDeleted');
+    });
+
+    it('normalises code and defaultCurrency to uppercase before calling the service', async () => {
+      suppliersService.create.mockResolvedValue(MOCK_SUPPLIER);
+
+      await service.execute(
+        'POST /master-data/suppliers',
+        { code: 'acme-01', legalName: 'Acme Supply Co.', defaultCurrency: 'eur' },
+        TENANT,
+      );
+
+      expect(suppliersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'ACME-01', defaultCurrency: 'EUR' }),
+        TENANT,
+      );
+    });
+
+    it('returns an error when legalName is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('POST /master-data/suppliers', { code: 'ACME-01' }, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/legalName is required/);
+      expect(suppliersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when status is not a valid enum value', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/suppliers',
+          { code: 'ACME-01', legalName: 'Acme Supply Co.', status: 'BOGUS' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/Invalid status/);
+      expect(suppliersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns the conflict error message when the code already exists', async () => {
+      suppliersService.create.mockRejectedValue(
+        new ConflictException("A supplier with code 'ACME-01' already exists"),
+      );
+
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/suppliers',
+          { code: 'ACME-01', legalName: 'Acme Supply Co.' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/ACME-01/);
+    });
+  });
+
+  describe('execute — PATCH /master-data/suppliers/:id', () => {
+    it('updates only the fields provided and returns the shaped result', async () => {
+      suppliersService.update.mockResolvedValue({ ...MOCK_SUPPLIER, status: SupplierStatus.ACTIVE });
+
+      const result = JSON.parse(
+        await service.execute(
+          'PATCH /master-data/suppliers/:id',
+          { id: 'supplier-1', status: 'active' },
+          TENANT,
+        ),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(suppliersService.update).toHaveBeenCalledWith('supplier-1', TENANT, {
+        status: SupplierStatus.ACTIVE,
+      });
+      expect(result.result['status']).toBe(SupplierStatus.ACTIVE);
+    });
+
+    it('returns an error when id is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('PATCH /master-data/suppliers/:id', { status: 'ACTIVE' }, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/id is required/);
+      expect(suppliersService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — DELETE /master-data/suppliers/:id', () => {
+    it('soft-deletes the supplier by id', async () => {
+      suppliersService.remove.mockResolvedValue(undefined);
+
+      const result = JSON.parse(
+        await service.execute('DELETE /master-data/suppliers/:id', { id: 'supplier-1' }, TENANT),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(result.result).toEqual({ id: 'supplier-1', deleted: true });
+      expect(suppliersService.remove).toHaveBeenCalledWith('supplier-1', TENANT);
+    });
+
+    it('returns an error when id is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('DELETE /master-data/suppliers/:id', {}, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/id is required/);
+      expect(suppliersService.remove).not.toHaveBeenCalled();
     });
   });
 });
