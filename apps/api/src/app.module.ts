@@ -5,10 +5,11 @@ import { UsersModule } from './users/users.module';
 import { ApprovalLimitsModule } from './approval-limits/approval-limits.module';
 import { SodRulesModule } from './sod-rules/sod-rules.module';
 import { UomModule } from './master-data/uom/uom.module';
+import { ItemsModule } from './master-data/items/items.module';
 import { QueryAgentModule } from './ai/query-agent/query-agent.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule, QueryAgentModule, AuthModule],
+  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule, ItemsModule, QueryAgentModule, AuthModule],
 })
 export class AppModule {}
