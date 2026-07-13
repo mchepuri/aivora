@@ -14,6 +14,7 @@ import { logoutAction } from '@/app/(public)/login/actions';
 const navLinks = [
   { href: '/inventory/units-of-measure', label: 'Units of Measure' },
   { href: '/inventory/items', label: 'Items' },
+  { href: '/suppliers', label: 'Suppliers' },
   { href: '/users', label: 'Users' },
 ];
 
