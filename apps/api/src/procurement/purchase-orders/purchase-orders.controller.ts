@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../../auth/strategies/jwt.strategy';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ListPurchaseOrdersDto } from './dto/list-purchase-orders.dto';
+import { RejectPurchaseOrderDto } from './dto/reject-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { PurchaseOrdersService } from './purchase-orders.service';
 
@@ -53,5 +54,33 @@ export class PurchaseOrdersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
     return this.purchaseOrdersService.remove(id, req.user.tenantId);
+  }
+
+  @Post(':id/submit')
+  @HttpCode(HttpStatus.OK)
+  submit(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.purchaseOrdersService.submit(id, req.user.tenantId);
+  }
+
+  @Post(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  approve(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.purchaseOrdersService.approve(id, req.user.tenantId, req.user.sub);
+  }
+
+  @Post(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  reject(
+    @Param('id') id: string,
+    @Body() dto: RejectPurchaseOrderDto,
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.purchaseOrdersService.reject(id, req.user.tenantId, dto);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  cancel(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.purchaseOrdersService.cancel(id, req.user.tenantId);
   }
 }
