@@ -1,7 +1,7 @@
 # Warehouses (Warehouse/Site Master) — Implementation Plan
 
 **Module:** Master Data → Warehouse Management
-**Status:** Planned
+**Status:** In Progress
 **Branch prefix:** `feature/warehouses-`
 **Source:** [Enterprise SCM Architecture Design Document §5.7, §4.1 Domain G](/docs/Enterprise_SCM_Architecture_Design_Document.md), [Purchase Order Roadmap](/docs/procurement/purchase-order-roadmap.md)
 
@@ -43,7 +43,7 @@ A PO only needs a `warehouse_id` to reference as its ship-to destination — the
 
 ### PR 1 — Database Schema `chore: add warehouses Prisma schema + migration`
 
-**Status:** [x] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `chore/warehouses-db-schema`
 
 **Changes:**
@@ -203,11 +203,12 @@ PR 4 / PR 5 (Bot — deferred until the UOM bot POC is validated)
 
 | PR | Title | Status | Branch | PR Link |
 |---|---|---|---|---|
-| PR 1 | DB schema | Planned | `chore/warehouses-db-schema` | — |
+| PR 1 | DB schema | In Progress | `chore/warehouses-db-schema` | — |
 | PR 2 | API CRUD | Planned | `feature/warehouses-api` | — |
 | PR 3 | FE UI | Planned | `feature/warehouses-frontend` | — |
 | PR 4 | Bot FE | Deferred | `feature/warehouses-bot-frontend` | — |
 | PR 5 | Bot backend | Deferred | `feature/warehouses-bot-backend` | — |
+| — | Chat agent registration (`call_api`) | Planned | `feature/warehouses-chat-agent` | — |
 
 ---
 
