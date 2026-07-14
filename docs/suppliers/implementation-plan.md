@@ -46,7 +46,7 @@ A PO only needs a `supplier_id` to reference — the fields above are the minimu
 
 ### PR 1 — Database Schema `chore: add suppliers Prisma schema + migration`
 
-**Status:** [x] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `chore/suppliers-db-schema`
 
 **Changes:**
@@ -90,7 +90,7 @@ model Supplier {
 
 ### PR 2 — API CRUD `feat: add Supplier CRUD API endpoints`
 
-**Status:** [x] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `feature/suppliers-api`
 **Depends on:** PR 1
 
@@ -133,7 +133,7 @@ apps/api/src/master-data/suppliers/
 
 ### PR 3 — Frontend UI `feat: add Supplier management UI page`
 
-**Status:** [x] Planned | [ ] In Progress | [ ] Merged
+**Status:** [ ] Planned | [x] In Progress | [ ] Merged
 **Branch:** `feature/suppliers-frontend`
 **Depends on:** PR 2
 
@@ -206,9 +206,9 @@ PR 4 / PR 5 (Bot — deferred until the UOM bot POC is validated)
 
 | PR | Title | Status | Branch | PR Link |
 |---|---|---|---|---|
-| PR 1 | DB schema | Planned | `chore/suppliers-db-schema` | — |
-| PR 2 | API CRUD | Planned | `feature/suppliers-api` | — |
-| PR 3 | FE UI | Planned | `feature/suppliers-frontend` | — |
+| PR 1 | DB schema | In Progress | `chore/suppliers-db-schema` | [#83](https://github.com/mchepuri/aivora/pull/83) |
+| PR 2 | API CRUD | In Progress | `feature/suppliers-api` | [#84](https://github.com/mchepuri/aivora/pull/84) |
+| PR 3 | FE UI | In Progress | `feature/suppliers-frontend` | [#85](https://github.com/mchepuri/aivora/pull/85) |
 | PR 4 | Bot FE | Deferred | `feature/suppliers-bot-frontend` | — |
 | PR 5 | Bot backend | Deferred | `feature/suppliers-bot-backend` | — |
 
