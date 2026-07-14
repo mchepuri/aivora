@@ -210,3 +210,30 @@ model Item {
   @@index([tenantId, sku], map: "items_sku_active_key")
   @@map("items")
 }
+
+enum SupplierStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  BLOCKED
+}
+
+model Supplier {
+  id              String         @id @default(cuid())
+  tenantId        String
+  code            String         @db.VarChar(32)
+  legalName       String         @db.VarChar(255)
+  defaultCurrency String         @default("USD") @db.VarChar(3)
+  ratingScore     Decimal?       @db.Decimal(4, 2)
+  status          SupplierStatus @default(PENDING_APPROVAL)
+  isDeleted       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  createdBy       String?
+  updatedAt       DateTime       @updatedAt
+  updatedBy       String?
+
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as units_of_measure_code_active_key / items_sku_active_key.
+  @@index([tenantId, code], map: "suppliers_code_active_key")
+  @@map("suppliers")
+}

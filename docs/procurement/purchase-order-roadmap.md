@@ -58,9 +58,9 @@ Suppliers and Warehouses have no dependency on each other, so they can be built 
 
 | # | Module | Plan doc | Unblocks |
 |---|---|---|---|
-| 1 | **Items** (`items`) | [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) — in progress (PR 1 merged into working branch) | PO lines need `item_id` |
-| 2 | **Suppliers** (`suppliers`) | Not yet written | PO header needs `supplier_id` |
-| 3 | **Warehouses** (`warehouses`) | Not yet written | PO header needs `warehouse_id` (ship-to) |
+| 1 | **Items** (`items`) | [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) — in progress (PRs 1–3 open, plus chat-agent write access) | PO lines need `item_id` |
+| 2 | **Suppliers** (`suppliers`) | [docs/suppliers/implementation-plan.md](/docs/suppliers/implementation-plan.md) — planned | PO header needs `supplier_id` |
+| 3 | **Warehouses** (`warehouses`) | [docs/warehouses/implementation-plan.md](/docs/warehouses/implementation-plan.md) — planned | PO header needs `warehouse_id` (ship-to) |
 | 4 | **Purchase Orders** (`purchase_orders` + `purchase_order_lines`) | Not yet written | Target feature |
 
 Items (1), Suppliers (2), and Warehouses (3) can proceed as three parallel workstreams once each has its own plan doc — none of them depend on each other. Purchase Orders (4) depends on all three.
@@ -75,6 +75,9 @@ To avoid over-building master data the PO flow doesn't strictly need yet:
 - **`item_categories`, `item_attributes`, `price_lists`, `hsn_sac_codes`** — all nullable/optional relations on `items`. Deferred to future master-data PRs.
 - **`number_sequences`** (configurable `PO-2026-00001` numbering) — deferred; PO numbering can start with a simple per-tenant counter and be swapped for the configurable version later without a breaking migration.
 - **`purchase_requisitions`, `rfqs`, `purchase_order_amendments`** — upstream/around PO, not blockers to creating one. Deferred.
+- **No `addresses` master table.** Suppliers gets no address fields at all in its first PR (deferred to `supplier_addresses`); Warehouses gets a single free-text `address_line` placeholder rather than a structured/reusable address model, since a real `addresses` table would be shared across suppliers, customers, and warehouses and shouldn't be designed once here in isolation.
+- **`payment_term_id` / `default_ap_account` deferred on Suppliers** — same reasoning as `tax_code_id` on PO lines: the referenced tables (`payment_terms`, `chart_of_accounts`) don't exist yet and neither is a PO blocker.
+- **The full warehouse storage hierarchy is deferred.** `warehouse_zones`/`aisles`/`racks`/`bins`, `license_plates`, `warehouse_tasks`, `pick_lists`, `putaway_rules`, and `cycle_counts` are a distinct future "Warehouse Operations" milestone — a PO/GRN only needs the base `warehouses` row to reference.
 
 ## After Purchase Orders
 
