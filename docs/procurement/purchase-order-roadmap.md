@@ -12,20 +12,24 @@
 |---|---|
 | Auth / Users / Roles / RBAC / Approval Limits / SoD Rules | ✅ Built (`apps/api/src/{auth,users,approval-limits,sod-rules}`) |
 | Units of Measure (`units_of_measure`) | ✅ Built — see [docs/inventory/uom/implementation-plan.md](/docs/inventory/uom/implementation-plan.md) |
+| Items (`items`) | ✅ Built — see [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) |
+| Suppliers (`suppliers`) | ✅ Built — see [docs/suppliers/implementation-plan.md](/docs/suppliers/implementation-plan.md) |
+| Warehouses (`warehouses`) | ✅ Built — see [docs/warehouses/implementation-plan.md](/docs/warehouses/implementation-plan.md) |
+| Purchase Orders (`purchase_orders`, `purchase_order_lines`) | 🚧 Planned — see [docs/procurement/purchase-orders/implementation-plan.md](/docs/procurement/purchase-orders/implementation-plan.md) |
 | Everything else in §4.1 | Not started |
 
-## Why Purchase Orders can't be built yet
+## Why Purchase Orders couldn't be built before (now unblocked)
 
-Per §5.6, the two target tables have these **NOT NULL** foreign keys:
+Per §5.6, the two target tables had these **NOT NULL** foreign keys blocking them — all three are now resolved:
 
 ```
 purchase_orders
-  supplier_id     → suppliers.id        NOT NULL   ❌ suppliers table doesn't exist
-  warehouse_id    → warehouses.id       NOT NULL   ❌ warehouses table doesn't exist
+  supplier_id     → suppliers.id        NOT NULL   ✅ suppliers table now exists
+  warehouse_id    → warehouses.id       NOT NULL   ✅ warehouses table now exists
   currency_id     → currencies.id       NOT NULL   ⚠️  simplified — see "Deliberate simplifications" below
 
 purchase_order_lines
-  item_id         → items.id            NOT NULL   ❌ items table doesn't exist
+  item_id         → items.id            NOT NULL   ✅ items table now exists
   uom_id          → units_of_measure.id  NOT NULL   ✅ already built
   tax_code_id     → tax_codes.id         nullable   ➡️  deferred, same pattern as uom_conversions in the UOM plan
 ```
@@ -58,10 +62,10 @@ Suppliers and Warehouses have no dependency on each other, so they can be built 
 
 | # | Module | Plan doc | Unblocks |
 |---|---|---|---|
-| 1 | **Items** (`items`) | [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) — in progress (PRs 1–3 open, plus chat-agent write access) | PO lines need `item_id` |
-| 2 | **Suppliers** (`suppliers`) | [docs/suppliers/implementation-plan.md](/docs/suppliers/implementation-plan.md) — planned | PO header needs `supplier_id` |
-| 3 | **Warehouses** (`warehouses`) | [docs/warehouses/implementation-plan.md](/docs/warehouses/implementation-plan.md) — planned | PO header needs `warehouse_id` (ship-to) |
-| 4 | **Purchase Orders** (`purchase_orders` + `purchase_order_lines`) | Not yet written | Target feature |
+| 1 | **Items** (`items`) | [docs/inventory/items/implementation-plan.md](/docs/inventory/items/implementation-plan.md) — ✅ built | PO lines need `item_id` |
+| 2 | **Suppliers** (`suppliers`) | [docs/suppliers/implementation-plan.md](/docs/suppliers/implementation-plan.md) — ✅ built | PO header needs `supplier_id` |
+| 3 | **Warehouses** (`warehouses`) | [docs/warehouses/implementation-plan.md](/docs/warehouses/implementation-plan.md) — ✅ built | PO header needs `warehouse_id` (ship-to) |
+| 4 | **Purchase Orders** (`purchase_orders` + `purchase_order_lines`) | [docs/procurement/purchase-orders/implementation-plan.md](/docs/procurement/purchase-orders/implementation-plan.md) — planned | Target feature |
 
 Items (1), Suppliers (2), and Warehouses (3) can proceed as three parallel workstreams once each has its own plan doc — none of them depend on each other. Purchase Orders (4) depends on all three.
 
