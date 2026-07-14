@@ -7,10 +7,11 @@ import { SodRulesModule } from './sod-rules/sod-rules.module';
 import { UomModule } from './master-data/uom/uom.module';
 import { ItemsModule } from './master-data/items/items.module';
 import { SuppliersModule } from './master-data/suppliers/suppliers.module';
+import { WarehousesModule } from './master-data/warehouses/warehouses.module';
 import { QueryAgentModule } from './ai/query-agent/query-agent.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule, ItemsModule, SuppliersModule, QueryAgentModule, AuthModule],
+  imports: [PrismaModule, HealthModule, UsersModule, ApprovalLimitsModule, SodRulesModule, UomModule, ItemsModule, SuppliersModule, WarehousesModule, QueryAgentModule, AuthModule],
 })
 export class AppModule {}
