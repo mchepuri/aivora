@@ -13,6 +13,7 @@ import { UomService } from '../../master-data/uom/uom.service';
 import { ItemsService } from '../../master-data/items/items.service';
 import { SuppliersService } from '../../master-data/suppliers/suppliers.service';
 import { WarehousesService } from '../../master-data/warehouses/warehouses.service';
+import { PurchaseOrdersService } from '../../procurement/purchase-orders/purchase-orders.service';
 
 const TENANT = 'tenant-abc-123';
 
@@ -81,18 +82,44 @@ const MOCK_WAREHOUSE = {
   updatedBy: null,
 };
 
+const MOCK_PURCHASE_ORDER = {
+  id: 'po-1',
+  poNumber: 'PO-2026-00001',
+  supplierId: 'supplier-1',
+  warehouseId: 'warehouse-1',
+  currency: 'USD',
+  fxRate: '1',
+  orderDate: new Date('2026-07-14'),
+  expectedDate: null,
+  status: 'DRAFT',
+  subtotalAmount: '50',
+  taxAmount: '0',
+  totalAmount: '50',
+  approvedBy: null,
+  approvedAt: null,
+  rejectionReason: null,
+  tenantId: TENANT,
+  createdAt: new Date(),
+  createdBy: 'chat-agent',
+  updatedAt: new Date(),
+  updatedBy: 'chat-agent',
+  lines: [],
+};
+
 describe('ApiCapabilityService', () => {
   let service: ApiCapabilityService;
   let uomService: jest.Mocked<Pick<UomService, 'create' | 'update' | 'remove'>>;
   let itemsService: jest.Mocked<Pick<ItemsService, 'create' | 'update' | 'remove'>>;
   let suppliersService: jest.Mocked<Pick<SuppliersService, 'create' | 'update' | 'remove'>>;
   let warehousesService: jest.Mocked<Pick<WarehousesService, 'create' | 'update' | 'remove'>>;
+  let purchaseOrdersService: jest.Mocked<Pick<PurchaseOrdersService, 'create'>>;
 
   beforeEach(async () => {
     uomService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     itemsService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     suppliersService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     warehousesService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
+    purchaseOrdersService = { create: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -101,6 +128,7 @@ describe('ApiCapabilityService', () => {
         { provide: ItemsService, useValue: itemsService },
         { provide: SuppliersService, useValue: suppliersService },
         { provide: WarehousesService, useValue: warehousesService },
+        { provide: PurchaseOrdersService, useValue: purchaseOrdersService },
       ],
     }).compile();
 
@@ -659,6 +687,144 @@ describe('ApiCapabilityService', () => {
 
       expect(result.error).toMatch(/id is required/);
       expect(warehousesService.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — POST /procurement/purchase-orders', () => {
+    const validBody = {
+      supplierId: 'supplier-1',
+      warehouseId: 'warehouse-1',
+      orderDate: '2026-07-14',
+      lines: [{ itemId: 'item-1', uomId: 'uom-1', quantityOrdered: 10, unitPrice: 5 }],
+    };
+
+    it('creates a purchase order and returns only the shaped public fields', async () => {
+      purchaseOrdersService.create.mockResolvedValue(MOCK_PURCHASE_ORDER as never);
+
+      const result = JSON.parse(
+        await service.execute('POST /procurement/purchase-orders', validBody, TENANT),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(result.result).toEqual({
+        id: 'po-1',
+        poNumber: 'PO-2026-00001',
+        supplierId: 'supplier-1',
+        warehouseId: 'warehouse-1',
+        currency: 'USD',
+        orderDate: MOCK_PURCHASE_ORDER.orderDate.toISOString(),
+        expectedDate: null,
+        status: 'DRAFT',
+        subtotalAmount: '50',
+        taxAmount: '0',
+        totalAmount: '50',
+      });
+      expect(result.result).not.toHaveProperty('tenantId');
+      expect(result.result).not.toHaveProperty('createdBy');
+    });
+
+    it('attributes the PO to the chat-agent sentinel actor, not a real user', async () => {
+      purchaseOrdersService.create.mockResolvedValue(MOCK_PURCHASE_ORDER as never);
+
+      await service.execute('POST /procurement/purchase-orders', validBody, TENANT);
+
+      expect(purchaseOrdersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ supplierId: 'supplier-1' }),
+        TENANT,
+        'chat-agent',
+      );
+    });
+
+    it('normalises currency to uppercase before calling the service', async () => {
+      purchaseOrdersService.create.mockResolvedValue(MOCK_PURCHASE_ORDER as never);
+
+      await service.execute(
+        'POST /procurement/purchase-orders',
+        { ...validBody, currency: 'eur' },
+        TENANT,
+      );
+
+      expect(purchaseOrdersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: 'EUR' }),
+        TENANT,
+        'chat-agent',
+      );
+    });
+
+    it('returns an error when supplierId is missing', async () => {
+      const { supplierId: _supplierId, ...rest } = validBody;
+      const result = JSON.parse(
+        await service.execute('POST /procurement/purchase-orders', rest, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/supplierId is required/);
+      expect(purchaseOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when lines is missing', async () => {
+      const { lines: _lines, ...rest } = validBody;
+      const result = JSON.parse(
+        await service.execute('POST /procurement/purchase-orders', rest, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/lines is required/);
+      expect(purchaseOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when lines is an empty array', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /procurement/purchase-orders',
+          { ...validBody, lines: [] },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/lines is required/);
+      expect(purchaseOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when a line is missing itemId', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /procurement/purchase-orders',
+          { ...validBody, lines: [{ uomId: 'uom-1', quantityOrdered: 10, unitPrice: 5 }] },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/itemId is required/);
+      expect(purchaseOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when a line quantityOrdered is not positive', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /procurement/purchase-orders',
+          {
+            ...validBody,
+            lines: [{ itemId: 'item-1', uomId: 'uom-1', quantityOrdered: 0, unitPrice: 5 }],
+          },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/quantityOrdered must be a positive number/);
+      expect(purchaseOrdersService.create).not.toHaveBeenCalled();
+    });
+
+    it('propagates the service error message (e.g. bad supplier/warehouse/item id)', async () => {
+      purchaseOrdersService.create.mockRejectedValue(
+        new Error(
+          'One or more referenced records (supplier, warehouse, item, or unit of measure) do not exist.',
+        ),
+      );
+
+      const result = JSON.parse(
+        await service.execute('POST /procurement/purchase-orders', validBody, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/do not exist/);
     });
   });
 });

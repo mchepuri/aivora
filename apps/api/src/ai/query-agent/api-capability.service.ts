@@ -11,6 +11,9 @@ import { UpdateSupplierDto } from '../../master-data/suppliers/dto/update-suppli
 import { WarehousesService } from '../../master-data/warehouses/warehouses.service';
 import { CreateWarehouseDto } from '../../master-data/warehouses/dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from '../../master-data/warehouses/dto/update-warehouse.dto';
+import { PurchaseOrdersService } from '../../procurement/purchase-orders/purchase-orders.service';
+import { CreatePurchaseOrderDto } from '../../procurement/purchase-orders/dto/create-purchase-order.dto';
+import { CreatePurchaseOrderLineDto } from '../../procurement/purchase-orders/dto/create-purchase-order-line.dto';
 import {
   ItemStatus,
   ItemType,
@@ -19,6 +22,21 @@ import {
   ValuationMethod,
   WarehouseType,
 } from '@prisma/client';
+
+/**
+ * The chat agent pipeline (QueryAgentController -> ...-> ApiCapabilityService)
+ * only threads a tenantId through, no authenticated userId — see
+ * query-agent.service.ts's runAgentLoop(). Purchase orders are the first
+ * capability that needs a `createdBy` (for the approve endpoint's
+ * maker-checker check), so chat-created POs are attributed to this sentinel
+ * rather than a real user. Known limitation: maker-checker's "you can't
+ * approve your own PO" can never fire for a chat-created PO, since no real
+ * user id will ever equal this sentinel — safe (fails open toward requiring
+ * a human approver, not around them), just not attributed. Threading a real
+ * actingUserId through the whole agent pipeline is a larger change than this
+ * capability registration; revisit if that becomes a real need.
+ */
+const CHAT_AGENT_ACTOR = 'chat-agent';
 
 type BodyMap = Record<string, unknown>;
 
@@ -118,11 +136,51 @@ const WAREHOUSE_SHAPE = [
   'warehouseType',
   'timezone',
 ] as const;
+const PURCHASE_ORDER_SHAPE = [
+  'id',
+  'poNumber',
+  'supplierId',
+  'warehouseId',
+  'currency',
+  'orderDate',
+  'expectedDate',
+  'status',
+  'subtotalAmount',
+  'taxAmount',
+  'totalAmount',
+] as const;
 
 function shape<T extends Record<string, unknown>>(record: T, fields: readonly string[]) {
   const result: Record<string, unknown> = {};
   for (const field of fields) result[field] = record[field];
   return result;
+}
+
+function requirePurchaseOrderLines(body: BodyMap): CreatePurchaseOrderLineDto[] {
+  const raw = body['lines'];
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error('lines is required and must be a non-empty array.');
+  }
+  return raw.map((entry, index) => {
+    if (typeof entry !== 'object' || entry === null) {
+      throw new Error(`lines[${index}] must be an object.`);
+    }
+    const line = entry as BodyMap;
+    const dto = new CreatePurchaseOrderLineDto();
+    dto.itemId = requireString(line, 'itemId');
+    dto.uomId = requireString(line, 'uomId');
+    const quantityOrdered = parseOptionalNumber(line, 'quantityOrdered');
+    if (quantityOrdered === undefined || quantityOrdered <= 0) {
+      throw new Error(`lines[${index}].quantityOrdered must be a positive number.`);
+    }
+    dto.quantityOrdered = quantityOrdered;
+    const unitPrice = parseOptionalNumber(line, 'unitPrice');
+    if (unitPrice === undefined) {
+      throw new Error(`lines[${index}].unitPrice is required.`);
+    }
+    dto.unitPrice = unitPrice;
+    return dto;
+  });
 }
 
 @Injectable()
@@ -135,6 +193,7 @@ export class ApiCapabilityService {
     private readonly itemsService: ItemsService,
     private readonly suppliersService: SuppliersService,
     private readonly warehousesService: WarehousesService,
+    private readonly purchaseOrdersService: PurchaseOrdersService,
   ) {
     this.registry = new Map<string, Capability>([
       [
@@ -429,6 +488,39 @@ export class ApiCapabilityService {
             const id = requireId(body);
             await this.warehousesService.remove(id, tenantId);
             return { id, deleted: true };
+          },
+        },
+      ],
+      [
+        'POST /procurement/purchase-orders',
+        {
+          description:
+            'Create a new Purchase Order as DRAFT with one or more line items. The server generates the PO number and computes line/header totals — do not pass them. Only DRAFT/create is available here; submitting for approval, approving, rejecting, and cancelling a PO are not exposed to chat and must be done in the Purchase Orders UI.',
+          fields: {
+            supplierId: { type: 'string (Supplier id)', required: true },
+            warehouseId: { type: 'string (Warehouse id, ship-to)', required: true },
+            currency: { type: 'string, 3-letter currency code, uppercase (default USD)', required: false },
+            orderDate: { type: 'ISO date string, e.g. 2026-07-14', required: true },
+            expectedDate: { type: 'ISO date string, e.g. 2026-07-21', required: false },
+            lines: {
+              type: 'array of { itemId: string, uomId: string, quantityOrdered: positive number, unitPrice: non-negative number }, at least one entry',
+              required: true,
+            },
+          },
+          handler: async (body, tenantId) => {
+            const dto = new CreatePurchaseOrderDto();
+            dto.supplierId = requireString(body, 'supplierId');
+            dto.warehouseId = requireString(body, 'warehouseId');
+            if (body['currency'] !== undefined) {
+              dto.currency = requireString(body, 'currency').toUpperCase();
+            }
+            dto.orderDate = requireString(body, 'orderDate');
+            if (body['expectedDate'] !== undefined) {
+              dto.expectedDate = requireString(body, 'expectedDate');
+            }
+            dto.lines = requirePurchaseOrderLines(body);
+            const created = await this.purchaseOrdersService.create(dto, tenantId, CHAT_AGENT_ACTOR);
+            return shape(created, PURCHASE_ORDER_SHAPE);
           },
         },
       ],
