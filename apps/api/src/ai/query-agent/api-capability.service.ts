@@ -8,7 +8,17 @@ import { UpdateItemDto } from '../../master-data/items/dto/update-item.dto';
 import { SuppliersService } from '../../master-data/suppliers/suppliers.service';
 import { CreateSupplierDto } from '../../master-data/suppliers/dto/create-supplier.dto';
 import { UpdateSupplierDto } from '../../master-data/suppliers/dto/update-supplier.dto';
-import { ItemStatus, ItemType, SupplierStatus, UomClass, ValuationMethod } from '@prisma/client';
+import { WarehousesService } from '../../master-data/warehouses/warehouses.service';
+import { CreateWarehouseDto } from '../../master-data/warehouses/dto/create-warehouse.dto';
+import { UpdateWarehouseDto } from '../../master-data/warehouses/dto/update-warehouse.dto';
+import {
+  ItemStatus,
+  ItemType,
+  SupplierStatus,
+  UomClass,
+  ValuationMethod,
+  WarehouseType,
+} from '@prisma/client';
 
 type BodyMap = Record<string, unknown>;
 
@@ -75,6 +85,7 @@ const ITEM_TYPES = Object.values(ItemType);
 const VALUATION_METHODS = Object.values(ValuationMethod);
 const ITEM_STATUSES = Object.values(ItemStatus);
 const SUPPLIER_STATUSES = Object.values(SupplierStatus);
+const WAREHOUSE_TYPES = Object.values(WarehouseType);
 
 const UOM_SHAPE = ['id', 'code', 'name', 'uomClass'] as const;
 const ITEM_SHAPE = [
@@ -99,6 +110,14 @@ const SUPPLIER_SHAPE = [
   'ratingScore',
   'status',
 ] as const;
+const WAREHOUSE_SHAPE = [
+  'id',
+  'code',
+  'name',
+  'addressLine',
+  'warehouseType',
+  'timezone',
+] as const;
 
 function shape<T extends Record<string, unknown>>(record: T, fields: readonly string[]) {
   const result: Record<string, unknown> = {};
@@ -115,6 +134,7 @@ export class ApiCapabilityService {
     private readonly uomService: UomService,
     private readonly itemsService: ItemsService,
     private readonly suppliersService: SuppliersService,
+    private readonly warehousesService: WarehousesService,
   ) {
     this.registry = new Map<string, Capability>([
       [
@@ -334,6 +354,80 @@ export class ApiCapabilityService {
           handler: async (body, tenantId) => {
             const id = requireId(body);
             await this.suppliersService.remove(id, tenantId);
+            return { id, deleted: true };
+          },
+        },
+      ],
+      [
+        'POST /master-data/warehouses',
+        {
+          description: 'Create a new Warehouse in the site master',
+          fields: {
+            code: { type: 'string, max 16 chars, uppercase', required: true },
+            name: { type: 'string, max 150 chars', required: true },
+            addressLine: { type: 'string, max 255 chars', required: false },
+            warehouseType: {
+              type: 'enum: DC | RETAIL_BACKROOM | MANUFACTURING | BONDED | VIRTUAL (default DC)',
+              required: false,
+            },
+            timezone: { type: 'string, max 64 chars (default UTC)', required: false },
+          },
+          handler: async (body, tenantId) => {
+            const dto = new CreateWarehouseDto();
+            dto.code = requireString(body, 'code').toUpperCase();
+            dto.name = requireString(body, 'name');
+            if (body['addressLine'] !== undefined) {
+              dto.addressLine = requireString(body, 'addressLine');
+            }
+            const warehouseType = parseEnum(body, 'warehouseType', WAREHOUSE_TYPES);
+            if (warehouseType !== undefined) dto.warehouseType = warehouseType;
+            if (body['timezone'] !== undefined) dto.timezone = requireString(body, 'timezone');
+            const created = await this.warehousesService.create(dto, tenantId);
+            return shape(created, WAREHOUSE_SHAPE);
+          },
+        },
+      ],
+      [
+        'PATCH /master-data/warehouses/:id',
+        {
+          description: 'Update an existing Warehouse. Only include the fields you want to change.',
+          fields: {
+            id: { type: 'string (Warehouse id)', required: true },
+            code: { type: 'string, max 16 chars, uppercase', required: false },
+            name: { type: 'string, max 150 chars', required: false },
+            addressLine: { type: 'string, max 255 chars', required: false },
+            warehouseType: {
+              type: 'enum: DC | RETAIL_BACKROOM | MANUFACTURING | BONDED | VIRTUAL',
+              required: false,
+            },
+            timezone: { type: 'string, max 64 chars', required: false },
+          },
+          handler: async (body, tenantId) => {
+            const id = requireId(body);
+            const dto = new UpdateWarehouseDto();
+            if (body['code'] !== undefined) dto.code = requireString(body, 'code').toUpperCase();
+            if (body['name'] !== undefined) dto.name = requireString(body, 'name');
+            if (body['addressLine'] !== undefined) {
+              dto.addressLine = requireString(body, 'addressLine');
+            }
+            const warehouseType = parseEnum(body, 'warehouseType', WAREHOUSE_TYPES);
+            if (warehouseType !== undefined) dto.warehouseType = warehouseType;
+            if (body['timezone'] !== undefined) dto.timezone = requireString(body, 'timezone');
+            const updated = await this.warehousesService.update(id, tenantId, dto);
+            return shape(updated, WAREHOUSE_SHAPE);
+          },
+        },
+      ],
+      [
+        'DELETE /master-data/warehouses/:id',
+        {
+          description: 'Soft-delete a Warehouse by id.',
+          fields: {
+            id: { type: 'string (Warehouse id)', required: true },
+          },
+          handler: async (body, tenantId) => {
+            const id = requireId(body);
+            await this.warehousesService.remove(id, tenantId);
             return { id, deleted: true };
           },
         },
