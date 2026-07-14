@@ -1,16 +1,19 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { ApprovalLimitsService } from '../../approval-limits/approval-limits.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { CreatePurchaseOrderLineDto } from './dto/create-purchase-order-line.dto';
 import { ListPurchaseOrdersDto } from './dto/list-purchase-orders.dto';
+import { RejectPurchaseOrderDto } from './dto/reject-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 
 const MAX_PO_NUMBER_ATTEMPTS = 3;
@@ -50,7 +53,10 @@ function sumLineTotals(lines: { lineTotal: Decimal }[]): Decimal {
 
 @Injectable()
 export class PurchaseOrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly approvalLimits: ApprovalLimitsService,
+  ) {}
 
   findAll(tenantId: string, query: ListPurchaseOrdersDto) {
     return this.prisma.purchaseOrder.findMany({
@@ -190,6 +196,115 @@ export class PurchaseOrdersService {
     await this.prisma.purchaseOrder.update({
       where: { id, tenantId },
       data: { status: 'CANCELLED' },
+    });
+  }
+
+  /** DRAFT -> PENDING_APPROVAL. Requires at least one line and a positive total. */
+  async submit(id: string, tenantId: string) {
+    const po = await this.findOne(id, tenantId);
+    if (po.status !== 'DRAFT') {
+      throw new ConflictException(
+        `Purchase order ${po.poNumber} is ${po.status}; only a DRAFT purchase order can be submitted for approval.`,
+      );
+    }
+    if (po.lines.length === 0 || po.totalAmount.lte(0)) {
+      throw new ConflictException(
+        'Purchase order must have at least one line and a total greater than zero before submitting.',
+      );
+    }
+    return this.prisma.purchaseOrder.update({
+      where: { id, tenantId },
+      data: { status: 'PENDING_APPROVAL', rejectionReason: null },
+      ...poDetailInclude,
+    });
+  }
+
+  /**
+   * PENDING_APPROVAL -> APPROVED. Two independent checks, see the
+   * "Approval Workflow" section of the implementation plan:
+   *  1. Amount-based authority via ApprovalLimitsService.check() (resource
+   *     "purchase_order") — any role the user holds may satisfy it.
+   *  2. Maker-checker — hand-rolled here, not SodRulesService, which answers
+   *     a different question (role-pair conflicts, not creator-vs-approver
+   *     on one document).
+   */
+  async approve(id: string, tenantId: string, actingUserId: string) {
+    const po = await this.findOne(id, tenantId);
+    if (po.status !== 'PENDING_APPROVAL') {
+      throw new ConflictException(
+        `Purchase order ${po.poNumber} is ${po.status}; only a PENDING_APPROVAL purchase order can be approved.`,
+      );
+    }
+    if (po.createdBy === actingUserId) {
+      throw new ForbiddenException(
+        'You cannot approve a purchase order you created (maker-checker / segregation of duties).',
+      );
+    }
+
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId: actingUserId, tenantId },
+      select: { roleId: true },
+    });
+
+    let authorized = false;
+    for (const { roleId } of userRoles) {
+      const { allowed } = await this.approvalLimits.check(
+        tenantId,
+        roleId,
+        'purchase_order',
+        po.totalAmount.toString(),
+        po.currency,
+      );
+      if (allowed) {
+        authorized = true;
+        break;
+      }
+    }
+
+    if (!authorized) {
+      throw new ForbiddenException(
+        `Your role(s) do not have sufficient purchase order approval authority for ${po.currency} ${po.totalAmount.toString()}. Ask an approver with a higher limit.`,
+      );
+    }
+
+    return this.prisma.purchaseOrder.update({
+      where: { id, tenantId },
+      data: { status: 'APPROVED', approvedBy: actingUserId, approvedAt: new Date() },
+      ...poDetailInclude,
+    });
+  }
+
+  /** PENDING_APPROVAL -> DRAFT. Persists the reason so the creator can see why. */
+  async reject(id: string, tenantId: string, dto: RejectPurchaseOrderDto) {
+    const po = await this.findOne(id, tenantId);
+    if (po.status !== 'PENDING_APPROVAL') {
+      throw new ConflictException(
+        `Purchase order ${po.poNumber} is ${po.status}; only a PENDING_APPROVAL purchase order can be rejected.`,
+      );
+    }
+    return this.prisma.purchaseOrder.update({
+      where: { id, tenantId },
+      data: { status: 'DRAFT', rejectionReason: dto.reason },
+      ...poDetailInclude,
+    });
+  }
+
+  /**
+   * DRAFT or PENDING_APPROVAL -> CANCELLED. Not available from APPROVED —
+   * reversing an approved commitment is deferred (interacts with downstream
+   * GRN/AP flows that don't exist yet).
+   */
+  async cancel(id: string, tenantId: string) {
+    const po = await this.findOne(id, tenantId);
+    if (po.status !== 'DRAFT' && po.status !== 'PENDING_APPROVAL') {
+      throw new ConflictException(
+        `Purchase order ${po.poNumber} is ${po.status}; only DRAFT or PENDING_APPROVAL purchase orders can be cancelled.`,
+      );
+    }
+    return this.prisma.purchaseOrder.update({
+      where: { id, tenantId },
+      data: { status: 'CANCELLED' },
+      ...poDetailInclude,
     });
   }
 
