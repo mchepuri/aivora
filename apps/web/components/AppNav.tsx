@@ -16,6 +16,7 @@ const navLinks = [
   { href: '/inventory/items', label: 'Items' },
   { href: '/suppliers', label: 'Suppliers' },
   { href: '/warehouses', label: 'Warehouses' },
+  { href: '/purchase-orders', label: 'Purchase Orders' },
   { href: '/users', label: 'Users' },
 ];
 
