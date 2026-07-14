@@ -1,10 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
-import { ItemStatus, ItemType, SupplierStatus, UomClass, ValuationMethod } from '@prisma/client';
+import {
+  ItemStatus,
+  ItemType,
+  SupplierStatus,
+  UomClass,
+  ValuationMethod,
+  WarehouseType,
+} from '@prisma/client';
 import { ApiCapabilityService } from './api-capability.service';
 import { UomService } from '../../master-data/uom/uom.service';
 import { ItemsService } from '../../master-data/items/items.service';
 import { SuppliersService } from '../../master-data/suppliers/suppliers.service';
+import { WarehousesService } from '../../master-data/warehouses/warehouses.service';
 
 const TENANT = 'tenant-abc-123';
 
@@ -58,16 +66,33 @@ const MOCK_SUPPLIER = {
   updatedBy: null,
 };
 
+const MOCK_WAREHOUSE = {
+  id: 'warehouse-1',
+  code: 'DC-01',
+  name: 'East Coast DC',
+  addressLine: null,
+  warehouseType: WarehouseType.DC,
+  timezone: 'UTC',
+  tenantId: TENANT,
+  isDeleted: false,
+  createdAt: new Date(),
+  createdBy: null,
+  updatedAt: new Date(),
+  updatedBy: null,
+};
+
 describe('ApiCapabilityService', () => {
   let service: ApiCapabilityService;
   let uomService: jest.Mocked<Pick<UomService, 'create' | 'update' | 'remove'>>;
   let itemsService: jest.Mocked<Pick<ItemsService, 'create' | 'update' | 'remove'>>;
   let suppliersService: jest.Mocked<Pick<SuppliersService, 'create' | 'update' | 'remove'>>;
+  let warehousesService: jest.Mocked<Pick<WarehousesService, 'create' | 'update' | 'remove'>>;
 
   beforeEach(async () => {
     uomService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     itemsService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
     suppliersService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
+    warehousesService = { create: jest.fn(), update: jest.fn(), remove: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -75,6 +100,7 @@ describe('ApiCapabilityService', () => {
         { provide: UomService, useValue: uomService },
         { provide: ItemsService, useValue: itemsService },
         { provide: SuppliersService, useValue: suppliersService },
+        { provide: WarehousesService, useValue: warehousesService },
       ],
     }).compile();
 
@@ -499,6 +525,140 @@ describe('ApiCapabilityService', () => {
 
       expect(result.error).toMatch(/id is required/);
       expect(suppliersService.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — POST /master-data/warehouses', () => {
+    it('creates a warehouse and returns only the shaped public fields', async () => {
+      warehousesService.create.mockResolvedValue(MOCK_WAREHOUSE);
+
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/warehouses',
+          { code: 'dc-01', name: 'East Coast DC' },
+          TENANT,
+        ),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(result.result).toEqual({
+        id: 'warehouse-1',
+        code: 'DC-01',
+        name: 'East Coast DC',
+        addressLine: null,
+        warehouseType: WarehouseType.DC,
+        timezone: 'UTC',
+      });
+      expect(result.result).not.toHaveProperty('tenantId');
+      expect(result.result).not.toHaveProperty('isDeleted');
+    });
+
+    it('normalises code to uppercase before calling the service', async () => {
+      warehousesService.create.mockResolvedValue(MOCK_WAREHOUSE);
+
+      await service.execute(
+        'POST /master-data/warehouses',
+        { code: 'dc-01', name: 'East Coast DC' },
+        TENANT,
+      );
+
+      expect(warehousesService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'DC-01' }),
+        TENANT,
+      );
+    });
+
+    it('returns an error when name is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('POST /master-data/warehouses', { code: 'DC-01' }, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/name is required/);
+      expect(warehousesService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns an error when warehouseType is not a valid enum value', async () => {
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/warehouses',
+          { code: 'DC-01', name: 'East Coast DC', warehouseType: 'BOGUS' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/Invalid warehouseType/);
+      expect(warehousesService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns the conflict error message when the code already exists', async () => {
+      warehousesService.create.mockRejectedValue(
+        new ConflictException("A warehouse with code 'DC-01' already exists"),
+      );
+
+      const result = JSON.parse(
+        await service.execute(
+          'POST /master-data/warehouses',
+          { code: 'DC-01', name: 'East Coast DC' },
+          TENANT,
+        ),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/DC-01/);
+    });
+  });
+
+  describe('execute — PATCH /master-data/warehouses/:id', () => {
+    it('updates only the fields provided and returns the shaped result', async () => {
+      warehousesService.update.mockResolvedValue({
+        ...MOCK_WAREHOUSE,
+        warehouseType: WarehouseType.BONDED,
+      });
+
+      const result = JSON.parse(
+        await service.execute(
+          'PATCH /master-data/warehouses/:id',
+          { id: 'warehouse-1', warehouseType: 'bonded' },
+          TENANT,
+        ),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(warehousesService.update).toHaveBeenCalledWith('warehouse-1', TENANT, {
+        warehouseType: WarehouseType.BONDED,
+      });
+      expect(result.result['warehouseType']).toBe(WarehouseType.BONDED);
+    });
+
+    it('returns an error when id is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('PATCH /master-data/warehouses/:id', { name: 'x' }, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/id is required/);
+      expect(warehousesService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('execute — DELETE /master-data/warehouses/:id', () => {
+    it('soft-deletes the warehouse by id', async () => {
+      warehousesService.remove.mockResolvedValue(undefined);
+
+      const result = JSON.parse(
+        await service.execute('DELETE /master-data/warehouses/:id', { id: 'warehouse-1' }, TENANT),
+      ) as { success: boolean; result: Record<string, unknown> };
+
+      expect(result.success).toBe(true);
+      expect(result.result).toEqual({ id: 'warehouse-1', deleted: true });
+      expect(warehousesService.remove).toHaveBeenCalledWith('warehouse-1', TENANT);
+    });
+
+    it('returns an error when id is missing', async () => {
+      const result = JSON.parse(
+        await service.execute('DELETE /master-data/warehouses/:id', {}, TENANT),
+      ) as { error: string };
+
+      expect(result.error).toMatch(/id is required/);
+      expect(warehousesService.remove).not.toHaveBeenCalled();
     });
   });
 });
