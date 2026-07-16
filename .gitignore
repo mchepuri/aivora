@@ -31,6 +31,10 @@ apps/web/theme/apple.css
 apps/web/theme/apple.js
 apps/web/theme/apple.d.ts
 apps/web/theme/apple.variants.d.ts
+apps/web/theme/nebula.css
+apps/web/theme/nebula.js
+apps/web/theme/nebula.d.ts
+apps/web/theme/nebula.variants.d.ts
 
 # Logs
 *.log

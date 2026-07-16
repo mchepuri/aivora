@@ -5,7 +5,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "theme:build": "astryx theme build theme/apple.theme.ts -o theme/apple.css",
+    "theme:build": "astryx theme build theme/apple.theme.ts -o theme/apple.css && astryx theme build theme/nebula.theme.ts -o theme/nebula.css",
     "predev": "npm run theme:build",
     "dev": "next dev -p 3000",
     "prebuild": "npm run theme:build",
