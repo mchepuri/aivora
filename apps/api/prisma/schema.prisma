@@ -41,8 +41,8 @@ model Role {
 /// System-level permissions shared across all tenants.
 model Permission {
   id              String           @id @default(cuid())
-  action          String           // e.g. "create", "read", "update", "delete"
-  resource        String           // e.g. "inventory", "orders", "users"
+  action          String // e.g. "create", "read", "update", "delete"
+  resource        String // e.g. "inventory", "orders", "users"
   description     String?
   createdAt       DateTime         @default(now())
   rolePermissions RolePermission[]
@@ -124,20 +124,21 @@ enum UomClass {
 }
 
 model UnitOfMeasure {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   tenantId  String
-  code      String    @db.VarChar(16)
-  name      String    @db.VarChar(50)
+  code      String   @db.VarChar(16)
+  name      String   @db.VarChar(50)
   uomClass  UomClass
-  isDeleted Boolean   @default(false)
-  createdAt DateTime  @default(now())
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
   createdBy String?
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime @updatedAt
   updatedBy String?
 
-  uomConversionsFrom UomConversion[] @relation("FromUom")
-  uomConversionsTo   UomConversion[] @relation("ToUom")
+  uomConversionsFrom UomConversion[]     @relation("FromUom")
+  uomConversionsTo   UomConversion[]     @relation("ToUom")
   items              Item[]
+  purchaseOrderLines PurchaseOrderLine[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift.
@@ -146,15 +147,15 @@ model UnitOfMeasure {
 }
 
 model UomConversion {
-  id               String        @id @default(cuid())
+  id               String   @id @default(cuid())
   itemId           String
   fromUomId        String
   toUomId          String
-  conversionFactor Decimal       @db.Decimal(18, 8)
-  isDeleted        Boolean       @default(false)
-  createdAt        DateTime      @default(now())
+  conversionFactor Decimal  @db.Decimal(18, 8)
+  isDeleted        Boolean  @default(false)
+  createdAt        DateTime @default(now())
   createdBy        String?
-  updatedAt        DateTime      @updatedAt
+  updatedAt        DateTime @updatedAt
   updatedBy        String?
 
   fromUom UnitOfMeasure @relation("FromUom", fields: [fromUomId], references: [id])
@@ -204,9 +205,143 @@ model Item {
 
   baseUom UnitOfMeasure @relation(fields: [baseUomId], references: [id])
 
+  purchaseOrderLines PurchaseOrderLine[]
+
   // Partial unique index (tenantId, sku) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift,
   // same pattern as units_of_measure_code_active_key.
   @@index([tenantId, sku], map: "items_sku_active_key")
   @@map("items")
+}
+
+enum SupplierStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  BLOCKED
+}
+
+model Supplier {
+  id              String         @id @default(cuid())
+  tenantId        String
+  code            String         @db.VarChar(32)
+  legalName       String         @db.VarChar(255)
+  defaultCurrency String         @default("USD") @db.VarChar(3)
+  ratingScore     Decimal?       @db.Decimal(4, 2)
+  status          SupplierStatus @default(PENDING_APPROVAL)
+  isDeleted       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  createdBy       String?
+  updatedAt       DateTime       @updatedAt
+  updatedBy       String?
+
+  purchaseOrders PurchaseOrder[]
+
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as units_of_measure_code_active_key / items_sku_active_key.
+  @@index([tenantId, code], map: "suppliers_code_active_key")
+  @@map("suppliers")
+}
+
+enum WarehouseType {
+  DC
+  RETAIL_BACKROOM
+  MANUFACTURING
+  BONDED
+  VIRTUAL
+}
+
+model Warehouse {
+  id            String        @id @default(cuid())
+  tenantId      String
+  code          String        @db.VarChar(16)
+  name          String        @db.VarChar(150)
+  addressLine   String?       @db.VarChar(255)
+  warehouseType WarehouseType @default(DC)
+  timezone      String        @default("UTC") @db.VarChar(64)
+  isDeleted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  createdBy     String?
+  updatedAt     DateTime      @updatedAt
+  updatedBy     String?
+
+  purchaseOrders PurchaseOrder[]
+
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as units_of_measure_code_active_key / items_sku_active_key /
+  // suppliers_code_active_key.
+  @@index([tenantId, code], map: "warehouses_code_active_key")
+  @@map("warehouses")
+}
+
+// ─── Procurement ─────────────────────────────────────────────────────────────
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+/// PO header. See docs/procurement/purchase-orders/implementation-plan.md.
+model PurchaseOrder {
+  id              String              @id @default(cuid())
+  tenantId        String
+  poNumber        String              @db.VarChar(32)
+  supplierId      String
+  warehouseId     String
+  currency        String              @default("USD") @db.VarChar(3)
+  fxRate          Decimal             @default(1) @db.Decimal(18, 8)
+  orderDate       DateTime            @db.Date
+  expectedDate    DateTime?           @db.Date
+  status          PurchaseOrderStatus @default(DRAFT)
+  subtotalAmount  Decimal             @default(0) @db.Decimal(18, 2)
+  taxAmount       Decimal             @default(0) @db.Decimal(18, 2)
+  totalAmount     Decimal             @default(0) @db.Decimal(18, 2)
+  approvedBy      String?
+  approvedAt      DateTime?
+  /// Not in §5.6 — added so `reject` has somewhere to put its reason without
+  /// an audit_logs table (not built yet). Cleared on resubmit.
+  rejectionReason String?             @db.VarChar(500)
+  createdAt       DateTime            @default(now())
+  createdBy       String?
+  updatedAt       DateTime            @updatedAt
+  updatedBy       String?
+
+  supplier  Supplier            @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse           @relation(fields: [warehouseId], references: [id])
+  lines     PurchaseOrderLine[]
+
+  // Plain unique index, not partial-on-isDeleted like master data — POs have
+  // no soft-delete; "delete" means status -> CANCELLED (see implementation plan).
+  @@unique([tenantId, poNumber])
+  @@map("purchase_orders")
+}
+
+/// PO line items. See docs/procurement/purchase-orders/implementation-plan.md.
+model PurchaseOrderLine {
+  id               String  @id @default(cuid())
+  purchaseOrderId  String
+  lineNo           Int     @db.SmallInt
+  itemId           String
+  uomId            String
+  quantityOrdered  Decimal @db.Decimal(18, 4)
+  /// Denormalized rollup written only by the future Goods Receipt Notes milestone.
+  quantityReceived Decimal @default(0) @db.Decimal(18, 4)
+  unitPrice        Decimal @db.Decimal(18, 4)
+  /// No FK yet — tax_codes table doesn't exist. Unused/ignored until the tax
+  /// engine (§11) lands, same precedent as uom_conversions.itemId before `items`.
+  taxCodeId        String?
+  lineTotal        Decimal @db.Decimal(18, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  item          Item          @relation(fields: [itemId], references: [id])
+  uom           UnitOfMeasure @relation(fields: [uomId], references: [id])
+
+  @@unique([purchaseOrderId, lineNo])
+  @@map("purchase_order_lines")
 }

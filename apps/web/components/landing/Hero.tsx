@@ -8,7 +8,7 @@ export function Hero() {
   return (
     <Section
       variant="transparent"
-      className="relative overflow-hidden bg-gradient-to-b from-white to-canvas px-6 pt-28 pb-24 text-center sm:pt-36 sm:pb-32"
+      className="relative overflow-hidden bg-gradient-to-b from-[var(--color-background-surface)] to-canvas px-6 pt-28 pb-24 text-center sm:pt-36 sm:pb-32"
     >
       <Text type="label" color="accent" weight="semibold" justify="center">
         Introducing Aivora
@@ -33,7 +33,11 @@ export function Hero() {
         </Link>
       </div>
 
-      <div className="relative mx-auto mt-20 h-[360px] max-w-5xl overflow-hidden rounded-[28px] bg-ink shadow-2xl sm:h-[440px]">
+      {/* bg-[#1d1d1f] is a fixed literal, not the ink/text-primary token —
+          this decorative panel is permanently dark regardless of page theme
+          (same reasoning as the fixed text-white/90 below), so it must not
+          flip to light gray when the page switches to dark mode. */}
+      <div className="relative mx-auto mt-20 h-[360px] max-w-5xl overflow-hidden rounded-[28px] bg-[#1d1d1f] shadow-2xl sm:h-[440px]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,113,227,0.55),transparent_45%),radial-gradient(circle_at_75%_65%,rgba(94,92,230,0.45),transparent_50%)]" />
         <div className="relative flex h-full items-center justify-center px-8">
           {/* Reversed on this dark panel only — text-white/90 (utilities

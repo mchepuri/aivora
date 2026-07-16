@@ -2,8 +2,13 @@
 //
 // Custom Astryx theme mapping Aivora's Apple-inspired palette (see
 // CLAUDE.md § Design System & Theme) onto Astryx's semantic token set.
-// Light mode only for now — the app has no dark mode today, so this theme
-// intentionally doesn't provide [light, dark] tuples for most tokens.
+//
+// Color tokens are [light, dark] tuples — Astryx compiles these to CSS
+// light-dark(), resolved per-element via the `color-scheme` the active
+// <Theme mode> writes onto <html data-theme>. Light values are the
+// original Apple palette, unchanged. Dark values are a VS Code Dark+
+// inspired palette (not a strict match) — see the inline comments below,
+// especially --color-background-inverted.
 //
 // Built via `npm run theme:build` (astryx theme build) into apple.css /
 // apple.js — see apps/web/package.json predev/prebuild hooks. Those output
@@ -30,28 +35,34 @@ export const appleTheme = defineTheme({
   },
 
   tokens: {
-    '--color-text-primary': '#1d1d1f', // ink
-    '--color-text-secondary': '#86868b', // muted
-    '--color-icon-primary': '#1d1d1f',
-    '--color-icon-secondary': '#86868b',
+    '--color-text-primary': ['#1d1d1f', '#cccccc'], // ink / VS Code editor.foreground
+    '--color-text-secondary': ['#86868b', '#9d9d9d'], // muted
+    '--color-icon-primary': ['#1d1d1f', '#cccccc'],
+    '--color-icon-secondary': ['#86868b', '#9d9d9d'],
 
-    '--color-background-body': '#fbfbfd', // canvas
-    '--color-background-surface': '#ffffff',
-    '--color-background-card': '#ffffff',
-    '--color-background-popover': '#ffffff',
-    '--color-background-muted': '#f5f5f7',
-    '--color-background-inverted': '#1d1d1f', // ink — CTA/primary buttons (bg-ink text-white)
+    '--color-background-body': ['#fbfbfd', '#1e1e1e'], // canvas / VS Code editor.background
+    '--color-background-surface': ['#ffffff', '#252526'], // VS Code sideBar.background
+    '--color-background-card': ['#ffffff', '#252526'],
+    '--color-background-popover': ['#ffffff', '#2d2d30'], // one step above surface so popovers visibly lift
+    '--color-background-muted': ['#f5f5f7', '#2a2d2e'],
+    // ink in light mode — CTA/primary buttons (bg-ink text-white). In dark
+    // mode this can't stay a near-black fill (it would disappear into an
+    // already-dark page), so it switches to VS Code's button.background
+    // blue instead — the CTA needs to stay the boldest element on the page
+    // in both modes. Pairs with --color-on-dark below, which Astryx fixes
+    // to white in both modes, so the label stays legible either way.
+    '--color-background-inverted': ['#1d1d1f', '#0e639c'],
 
-    '--color-accent': '#0071e3',
-    '--color-text-accent': '#0071e3',
-    '--color-icon-accent': '#0071e3',
+    '--color-accent': ['#0071e3', '#3794ff'], // VS Code link/accent blue — brighter than the CTA blue above
+    '--color-text-accent': ['#0071e3', '#3794ff'],
+    '--color-icon-accent': ['#0071e3', '#3794ff'],
 
-    '--color-error': '#ff3b30', // danger
-    '--color-background-error-inverted': '#ff3b30',
+    '--color-error': ['#ff3b30', '#f14c4c'], // danger / VS Code errorForeground
+    '--color-background-error-inverted': ['#ff3b30', '#f14c4c'],
 
     // Hairline borders (CLAUDE.md: "border border-black/5 — very subtle").
-    '--color-border': 'rgba(0, 0, 0, 0.05)',
-    '--color-border-emphasized': 'rgba(0, 0, 0, 0.1)', // inputs: border-black/10
+    '--color-border': ['rgba(0, 0, 0, 0.05)', 'rgba(255, 255, 255, 0.08)'],
+    '--color-border-emphasized': ['rgba(0, 0, 0, 0.1)', 'rgba(255, 255, 255, 0.16)'], // inputs: border-black/10
 
     // Cards/panels: rounded-2xl (16px). --radius-page stays the default 28px,
     // which already matches CLAUDE.md's hero-element radius exactly.

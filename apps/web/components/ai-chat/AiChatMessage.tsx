@@ -24,9 +24,9 @@ export function ThinkingIndicator() {
       <ChatMessageBubble variant="ghost">
         <span className="inline-flex items-center gap-2 text-[13px] text-muted">
           <span className="inline-flex gap-0.5">
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '0ms' }} />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '150ms' }} />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-black/30" style={{ animationDelay: '300ms' }} />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[light-dark(rgba(0,0,0,0.3),rgba(255,255,255,0.4))]" style={{ animationDelay: '0ms' }} />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[light-dark(rgba(0,0,0,0.3),rgba(255,255,255,0.4))]" style={{ animationDelay: '150ms' }} />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[light-dark(rgba(0,0,0,0.3),rgba(255,255,255,0.4))]" style={{ animationDelay: '300ms' }} />
           </span>
           Thinking…
         </span>

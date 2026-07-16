@@ -90,7 +90,7 @@ export function AiFloatingOverlay() {
       {hasHistory && (
         <div
           ref={messagesRef}
-          className="mb-2 flex max-h-[45vh] flex-col gap-3 overflow-y-auto rounded-3xl bg-white p-4"
+          className="mb-2 flex max-h-[45vh] flex-col gap-3 overflow-y-auto rounded-3xl bg-[var(--color-background-popover)] p-4"
           style={{
             boxShadow:
               '0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.05)',
@@ -106,7 +106,7 @@ export function AiFloatingOverlay() {
 
       {/* Search pill card — the 3D floating element */}
       <div
-        className="overflow-hidden rounded-[28px] bg-white"
+        className="overflow-hidden rounded-[28px] bg-[var(--color-background-popover)]"
         style={{
           boxShadow:
             '0 24px 80px rgba(0,0,0,0.20), 0 8px 24px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06)',
@@ -115,12 +115,12 @@ export function AiFloatingOverlay() {
         {/* Drag handle */}
         <div
           onMouseDown={onDragHandleMouseDown}
-          className={`flex h-5 items-center justify-center bg-black/[0.025] ${
+          className={`flex h-5 items-center justify-center bg-[light-dark(rgba(0,0,0,0.025),rgba(255,255,255,0.06))] ${
             isDragging ? 'cursor-grabbing' : 'cursor-grab'
           }`}
           title="Drag to move"
         >
-          <div className="h-1 w-8 rounded-full bg-black/15" />
+          <div className="h-1 w-8 rounded-full bg-[light-dark(rgba(0,0,0,0.15),rgba(255,255,255,0.24))]" />
         </div>
 
         <ChatComposer

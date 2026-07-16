@@ -14,7 +14,7 @@ export function AiChatLauncher() {
       onClick={expandChat}
       title="Open AIvora chat"
       aria-label="Open AIvora chat"
-      className="fixed bottom-6 left-1/2 z-50 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-ink text-white shadow-2xl transition hover:bg-ink/85"
+      className="fixed bottom-6 left-1/2 z-50 flex h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--color-background-inverted)] text-[var(--color-on-dark)] shadow-2xl transition hover:bg-[var(--color-background-inverted)]/85"
     >
       <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" fill="white" />

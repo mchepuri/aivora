@@ -34,13 +34,13 @@ export function AiSidePanel() {
       // instead of the viewport edge, so the panel never covers the nav —
       // including the account menu / logout in its top-right corner.
       style={{ top: 'var(--app-nav-height, 3.5rem)', boxShadow: '-8px 0 40px rgba(0,0,0,0.07)' }}
-      className={`fixed bottom-0 right-0 z-40 flex w-[30vw] flex-col border-l border-black/[0.06] bg-white transition-transform duration-500 ease-in-out ${
+      className={`fixed bottom-0 right-0 z-40 flex w-[30vw] flex-col border-l border-[light-dark(rgba(0,0,0,0.06),rgba(255,255,255,0.12))] bg-[var(--color-background-surface)] transition-transform duration-500 ease-in-out ${
         visible ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center gap-2.5 border-b border-black/[0.06] px-4 py-3.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ink">
+      <div className="flex items-center gap-2.5 border-b border-[light-dark(rgba(0,0,0,0.06),rgba(255,255,255,0.12))] px-4 py-3.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-background-inverted)]">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" fill="white" />
           </svg>

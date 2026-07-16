@@ -1,5 +1,6 @@
 import { TopNav, TopNavHeading, TopNavItem } from '@astryxdesign/core/TopNav';
 import { Button } from '@/components/ui/Button';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 const navLinks = [
   { href: '#platform', label: 'Platform' },
@@ -9,7 +10,7 @@ const navLinks = [
 
 export function Header() {
   return (
-    <div className="sticky top-0 z-50 border-b border-black/5 bg-white/70 backdrop-blur-md">
+    <div className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[light-dark(rgba(255,255,255,0.7),rgba(30,30,30,0.7))] backdrop-blur-md">
       <TopNav
         label="Site navigation"
         heading={<TopNavHeading heading="Aivora" headingHref="/" />}
@@ -18,6 +19,7 @@ export function Header() {
         ))}
         endContent={
           <>
+            <ThemeSwitcher />
             <Button variant="ghost" href="/login">
               Log in
             </Button>
