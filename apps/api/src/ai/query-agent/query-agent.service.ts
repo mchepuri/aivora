@@ -97,6 +97,19 @@ export class QueryAgentService {
       'Agent rules:',
       '- For reading data, use execute_sql with SELECT statements only. Never write raw INSERT/UPDATE/DELETE/DROP/ALTER SQL.',
       '- For write operations, use call_api with an endpoint from the "Available API Operations" section below.',
+      '- CRITICAL: Before calling call_api for a create/update operation (e.g. "create a UOM",',
+      '  "add a supplier"), first check the required and optional fields listed for that endpoint',
+      '  in "Available API Operations" below. List those fields for the user and ask them to',
+      '  provide values for at least all required fields. Do NOT call call_api until the user has',
+      '  supplied the required field values in this conversation.',
+      '- NEVER invent, guess, or fill in placeholder/sample values (e.g. a made-up code, name,',
+      '  SKU, currency, or id) for a required field the user has not given you. If a required',
+      '  value is missing or a referenced id (e.g. baseUomId, supplierId, warehouseId, itemId) is',
+      '  unknown, ask the user for it or look it up with execute_sql — never fabricate it.',
+      '- Optional fields with a stated default (e.g. "default USD") may be left out and the',
+      '  server default will apply — do not invent a different value for them either.',
+      '- Once you have all required field values from the user, briefly confirm what you are',
+      '  about to create before calling call_api.',
       `- Every SELECT query MUST include: WHERE "tenantId" = '${tenantId}'`,
       '- CRITICAL: All column names in this database use camelCase (e.g. "tenantId", "isDeleted",',
       '  "createdAt", "uomClass"). They were created with double-quotes by Prisma, so you MUST',
@@ -152,8 +165,14 @@ export class QueryAgentService {
 
       this.logger.debug(`[turn ${turn}] raw model response: ${JSON.stringify(response)}`);
 
-      if (!response.choices.length) {
-        this.logger.warn('LLM returned empty choices array');
+      if (!response?.choices?.length) {
+        this.logger.warn(`[turn ${turn}] model response had no choices: ${JSON.stringify(response)}`);
+        if (!switchedToFallback) {
+          this.logger.warn(`Switching to ${FALLBACK_MODEL} after malformed response`);
+          model = FALLBACK_MODEL;
+          switchedToFallback = true;
+          continue;
+        }
         return 'The agent received an unexpected response. Please try again.';
       }
       const { finish_reason, message } = response.choices[0];
