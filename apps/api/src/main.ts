@@ -1,11 +1,15 @@
+import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { resolveLogLevels } from './log-level';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: resolveLogLevels(),
+  });
 
   app.setGlobalPrefix('api');
   app.use(cookieParser());
@@ -14,7 +18,7 @@ async function bootstrap() {
 
   const port = process.env.API_PORT ?? 3001;
   await app.listen(port);
-  console.log(`API running on http://localhost:${port}/api`);
+  new Logger('Bootstrap').log(`API running on http://localhost:${port}/api`);
 }
 
 bootstrap();

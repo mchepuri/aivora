@@ -1,15 +1,19 @@
 import { AppNav } from '@/components/AppNav';
-import { InventoryBot } from '@/components/inventory/bot/InventoryBot';
+import { AiChatProvider } from '@/components/ai-chat/AiChatContext';
+import { AuthenticatedContent } from '@/components/ai-chat/AuthenticatedContent';
+import { AivaChat } from '@/components/ai-chat/AivaChat';
 
 // Authenticated pages fetch live data per-request — never statically prerender them.
 export const dynamic = 'force-dynamic';
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-canvas">
-      <AppNav />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
-      <InventoryBot />
-    </div>
+    <AiChatProvider>
+      <div className="flex min-h-screen flex-col bg-canvas">
+        <AppNav />
+        <AuthenticatedContent>{children}</AuthenticatedContent>
+        <AivaChat />
+      </div>
+    </AiChatProvider>
   );
 }

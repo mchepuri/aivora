@@ -1,30 +1,34 @@
 import {
   Controller, Get, Post, Put, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Param, Body, Query, Request, HttpCode, HttpStatus, UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { ApprovalLimitsService } from './approval-limits.service';
 import { CreateApprovalLimitDto } from './dto/create-approval-limit.dto';
 import { UpdateApprovalLimitDto } from './dto/update-approval-limit.dto';
 import { CheckApprovalLimitDto } from './dto/check-approval-limit.dto';
 
 @Controller('approval-limits')
+@UseGuards(JwtAuthGuard)
 export class ApprovalLimitsController {
   constructor(private readonly approvalLimitsService: ApprovalLimitsService) {}
 
   @Get()
   findAll(
-    @Query('tenantId') tenantId: string,
+    @Request() req: { user: JwtPayload },
     @Query('roleId') roleId?: string,
     @Query('resource') resource?: string,
   ) {
-    return this.approvalLimitsService.findAll(tenantId, roleId, resource);
+    return this.approvalLimitsService.findAll(req.user.tenantId, roleId, resource);
   }
 
-  /** Check whether a role can approve a given amount for a resource. */
+  // NOTE: 'check' must be declared before ':id' — literal routes take priority
+  // over param routes in NestJS only when declared first in the class body.
   @Get('check')
-  check(@Query() query: CheckApprovalLimitDto) {
+  check(@Request() req: { user: JwtPayload }, @Query() query: CheckApprovalLimitDto) {
     return this.approvalLimitsService.check(
-      query.tenantId,
+      req.user.tenantId,
       query.roleId,
       query.resource,
       query.amount,
@@ -33,27 +37,28 @@ export class ApprovalLimitsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('tenantId') tenantId: string) {
-    return this.approvalLimitsService.findOne(id, tenantId);
+  findOne(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.approvalLimitsService.findOne(id, req.user.tenantId);
   }
 
   @Post()
-  create(@Body() dto: CreateApprovalLimitDto) {
-    return this.approvalLimitsService.create(dto);
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() dto: CreateApprovalLimitDto, @Request() req: { user: JwtPayload }) {
+    return this.approvalLimitsService.create(dto, req.user.tenantId);
   }
 
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Query('tenantId') tenantId: string,
+    @Request() req: { user: JwtPayload },
     @Body() dto: UpdateApprovalLimitDto,
   ) {
-    return this.approvalLimitsService.update(id, tenantId, dto);
+    return this.approvalLimitsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string, @Query('tenantId') tenantId: string) {
-    return this.approvalLimitsService.remove(id, tenantId);
+  remove(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.approvalLimitsService.remove(id, req.user.tenantId);
   }
 }

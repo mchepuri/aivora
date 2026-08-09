@@ -13,12 +13,12 @@ All rules here apply to every task unless the task explicitly overrides one.
 aivora/
 ├── apps/
 │   ├── api/      # NestJS 10 backend — REST API, port 3001
-│   └── web/      # Next.js 14 (App Router) frontend — port 3000
+│   └── web/      # Next.js 15 (App Router) frontend — port 3000
 └── packages/
     └── shared/   # Shared TypeScript types (no runtime deps)
 ```
 
-Tech stack: Next.js 14 App Router · Tailwind CSS v4 · NestJS 10 · Prisma 5 · PostgreSQL · TypeScript strict · npm workspaces monorepo.
+Tech stack: Next.js 15 App Router · React 19 · Astryx (Meta's design system) · StyleX · Tailwind CSS v4 (layout only) · NestJS 10 · Prisma 5 · PostgreSQL · TypeScript strict · npm workspaces monorepo.
 
 ---
 
@@ -75,39 +75,111 @@ Tech stack: Next.js 14 App Router · Tailwind CSS v4 · NestJS 10 · Prisma 5 ·
 
 ## Design System & Theme
 
-Aivora uses an **Apple-inspired design language**: clean, minimal, generous whitespace, crisp typography.
+Aivora's UI is built on **Astryx** (`@astryxdesign/core`), Meta's open-source React design
+system (`astryx.atmeta.com`, `github.com/facebook/astryx`), themed to an **Apple-inspired
+design language**: clean, minimal, generous whitespace, crisp typography. Migrated from a
+hand-rolled Tailwind + Radix UI component set across a series of PRs (bookmarks
+`chore/upgrade-nextjs-15-react-19` through `chore/astryx-cleanup-and-docs` in the commit
+history) — check those commit messages for the "why" behind a given choice below, not just
+the "what".
 
-### Tailwind v4 custom tokens (defined in `apps/web/app/globals.css`)
+**Component-first, not class-first.** Reach for an Astryx component (`Button`, `TextInput`,
+`Dialog`, `Table`, `Badge`, …) before writing markup + Tailwind utility classes by hand. Check
+`apps/web/node_modules/@astryxdesign/core/dist/*/index.d.ts` (or astryx.atmeta.com/components)
+for what exists before assuming you need to hand-roll it — the catalog is large (150+
+components across actions, forms, data display, navigation, overlays, chat, and more).
 
-| Token | Hex | Usage |
+**Version is pinned exactly** (`"@astryxdesign/core": "0.1.4"`, no `^`/`~`) — Astryx is pre-1.0
+with active breaking changes even within the 0.x line. Bump deliberately, in its own PR, via
+`npx astryx upgrade --apply`; don't let it drift in via a routine `npm install`.
+
+### Theme (`apps/web/theme/apple.theme.ts`)
+
+The Apple palette is a custom Astryx theme built with `defineTheme()`, not a preset —
+`@astryxdesign/theme-neutral` was installed during the migration's foundation work but is
+**not actually used** and shouldn't be reintroduced without removing this custom theme first.
+
+| Astryx token | Value | Usage |
 |---|---|---|
-| `text-ink` / `bg-ink` | `#1d1d1f` | Primary text, dark backgrounds, CTA buttons |
-| `text-muted` | `#86868b` | Secondary text, placeholders, labels |
-| `bg-canvas` | `#fbfbfd` | Page background (Apple's signature off-white) |
-| `text-accent` / `bg-accent` | `#0071e3` | Links, primary action buttons, focus rings |
+| `--color-text-primary` | `#1d1d1f` (ink) | Primary text |
+| `--color-text-secondary` | `#86868b` (muted) | Secondary text, placeholders |
+| `--color-background-body` | `#fbfbfd` (canvas) | Page background |
+| `--color-accent` / `--color-text-accent` | `#0071e3` | Links, accent buttons, focus rings |
+| `--color-error` | `#ff3b30` (danger) | Error states, destructive actions |
+| `--color-background-inverted` | `#1d1d1f` (ink) | Primary/CTA buttons (see Buttons below) |
+| `--color-border` / `--color-border-emphasized` | `rgba(0,0,0,.05)` / `.1` | Hairline borders / input borders |
+| `--radius-container` | `16px` | Cards/panels (`rounded-2xl` equivalent) |
+| `--radius-element` | `12px` | Inputs, non-pill buttons (`rounded-xl` equivalent) |
+| `--radius-page` / `--radius-full` | `28px` / `9999px` | Hero elements / pill buttons (Astryx defaults, unchanged) |
+| `--text-display-1-size` | `clamp(3rem, 2rem + 4vw, 4.5rem)` | Marketing hero headlines only — overridden from the app-UI type scale, see the comment in `apple.theme.ts` |
+
+To change a color/radius/spacing value app-wide, edit `theme/apple.theme.ts` and run `npm run
+theme:build` (also runs automatically via `predev`/`prebuild`) — never hand-edit `theme/apple.css`
+or `apple.js`, they're generated and gitignored.
 
 ### Typography
-- Font: **Inter** (loaded via `next/font/google`, CSS variable `--font-inter`).
-- Body: `text-[15px]` or `text-[17px]` — match Apple's comfortable reading sizes.
-- Headings: `font-semibold tracking-tight` — never bold for UI headings.
-- Labels / captions: `text-[12px]` or `text-[13px]`.
+- Font: **Inter** (loaded via `next/font/google`), wired into the theme as
+  `var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`.
+- Use `Heading`/`Text` components with their `type`/`justify`/`color`/`weight` props, not raw
+  `<h1>`/`<p>` + Tailwind text classes. `<Heading level={1} type="display-1">` is the correct
+  way to get a hero-scale headline — see the theme table above for why it isn't tiny.
+- Body text: Astryx's `body` type scale token (~15px base). Headings: `font-semibold` (never
+  bold — set via `typography.heading.weight` in the theme, not per-instance).
+
+### Buttons — variant name mapping
+
+Astryx's own `primary` variant is **accent-colored**, which doesn't match this app's actual
+primary CTA style (`bg-ink text-white`). `apps/web/components/ui/Button.tsx` wraps
+`@astryxdesign/core`'s `Button` and remaps variant names — **use this wrapper's names, not
+Astryx's**, everywhere except when you have a specific reason to reach for the raw component:
+
+| This app's `variant` prop | Astryx's real variant | Renders as |
+|---|---|---|
+| `primary` (default) | `secondary` | ink background, white text — the main CTA style |
+| `accent` | `primary` | accent-blue background, white text |
+| `ghost` | `ghost` | transparent, ink text |
+
+This remap lives in the theme's `components.button['variant:secondary']` override (see
+`apple.theme.ts`) plus the wrapper's `variantMap` — don't try to add a new Astryx variant name
+instead of reusing this pattern. `astryx theme build` (0.1.4) generates variant-type
+augmentations against a stale interface name (`XDSButtonVariantMap` instead of the real
+`ButtonVariantMap`), so a new variant's types silently don't merge — see the comment in
+`apple.theme.ts` for the full story if you hit this.
 
 ### Spacing & layout
-- Max content width: `max-w-6xl mx-auto px-6`.
-- Cards / panels: `rounded-2xl` or `rounded-[28px]` for larger hero elements.
-- Borders: `border border-black/5` (very subtle — Apple style).
-- Shadows: `shadow-sm` for cards, `shadow-2xl` for hero/modal elements.
+- Max content width: `max-w-6xl mx-auto px-6` — a Tailwind convention, kept deliberately since
+  Astryx has no opinion on a specific max-width value.
+- Prefer Astryx's layout primitives (`Section`, `Grid`, `Stack`/`HStack`/`VStack`, `Center`,
+  `Layout`) over hand-rolled `flex`/`grid` Tailwind wrappers for anything beyond simple
+  one-off spacing. Tailwind utility classes are still fine for layout — spacing, positioning,
+  the content-width wrapper above — just not as the default for new component-level UI.
+- Shadows/elevation: Astryx's `--shadow-low/med/high` tokens (used automatically by components
+  like `Card`, `ChatComposer`). Bespoke decorative elements (e.g. the landing page hero's
+  gradient mockup panel) may still use inline `boxShadow` — that's fine for genuinely one-off
+  visual treatments Astryx has no primitive for.
 
-### Interactive elements
-- Buttons: `rounded-full` pill shape. Primary = `bg-ink text-white`. Accent = `bg-accent text-white`.
-- Always include `transition` on interactive elements for hover/focus states.
-- Inputs: `rounded-xl border border-black/10 focus:border-accent focus:ring-1 focus:ring-accent`.
-- Never use raw browser default focus outlines — always style `focus:` states.
+### Known Astryx 0.1.4 gaps (don't rediscover these)
+- **`TextInput` has no typed `autoComplete` prop** (input-specific HTML attributes aren't on
+  its base props type, though the component does forward them to the real `<input>` at
+  runtime). Use `apps/web/lib/astryxCompat.ts`'s `TextInput` re-export, not the raw
+  `@astryxdesign/core/TextInput` import, on any field where autofill matters.
+- **`TextInput` has no `maxLength`/`minLength`** at all. Client-side length hints are gone;
+  rely on the API's DTO `@MaxLength()` validation as the real source of truth.
+- Astryx's `Dialog`, `DropdownMenu`, `Avatar`, and form inputs are **fully controlled,
+  data-driven single components** (`isOpen`/`onOpenChange`, `items` arrays, `value`/`onChange`)
+  — not Radix-style uncontrolled compound components. Don't design new code assuming
+  Trigger/Content/Portal-style composition; check the component's actual prop shape first.
 
 ### Do not
-- Do not introduce new colour values outside the four theme tokens without updating `globals.css` and this file.
-- Do not use Tailwind's default colours (`blue-500`, `gray-300`, etc.) — always use the theme tokens.
-- Do not mix font sizes arbitrarily — stick to the Apple-scale sizes listed above.
+- Do not introduce new color values outside the theme tokens without updating
+  `theme/apple.theme.ts` (and this file if the change is significant).
+- Do not use Tailwind's default colors (`blue-500`, `gray-300`, etc.) — always use theme
+  tokens, either via an Astryx component or the `ink`/`muted`/`canvas`/`accent`/`danger`
+  Tailwind classes still defined in `globals.css`'s `@theme` block.
+- Do not hand-roll a component (button, input, dialog, table, badge, avatar, dropdown, …) with
+  raw HTML + Tailwind when an Astryx component covers the case.
+- Do not run `npx astryx init` against this repo — it auto-writes AI-agent doc files matching
+  whatever tool it detects, which for Claude means overwriting this file.
 
 ---
 

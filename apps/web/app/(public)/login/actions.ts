@@ -3,13 +3,15 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+// Server Actions always run server-side, so this needs the absolute API_ORIGIN — a relative
+// NEXT_PUBLIC_API_URL (used by browser-side calls) has no page origin to resolve against here.
+const API_BASE_URL = `${process.env.API_ORIGIN ?? 'http://localhost:3001'}/api`;
 
 export async function loginAction(
   email: string,
   password: string,
   callbackUrl: string,
-): Promise<{ error: string } | never> {
+): Promise<{ error: string } | void> {
   let data: { accessToken: string } | undefined;
 
   try {

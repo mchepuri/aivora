@@ -1,7 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcryptjs';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
 
@@ -16,13 +17,17 @@ const mockUser = {
   userRoles: [],
 };
 
+function makePrismaError(code: string): PrismaClientKnownRequestError {
+  return new PrismaClientKnownRequestError('db error', { code, clientVersion: '5.0.0' });
+}
+
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: { user: { findUnique: jest.Mock } };
+  let prisma: { user: { findUnique: jest.Mock; create: jest.Mock } };
   let jwt: { sign: jest.Mock };
 
   beforeEach(async () => {
-    prisma = { user: { findUnique: jest.fn() } };
+    prisma = { user: { findUnique: jest.fn(), create: jest.fn() } };
     jwt = { sign: jest.fn().mockReturnValue('signed-token') };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -69,6 +74,40 @@ describe('AuthService', () => {
       await expect(service.login('test@example.com', 'wrong-password')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+  });
+
+  describe('register', () => {
+    const registerDto = {
+      name: 'Jane Cooper',
+      email: 'jane@example.com',
+      password: 'securepassword',
+    };
+
+    it('returns accessToken and user without passwordHash on success', async () => {
+      const created = {
+        id: 'new-user-id',
+        tenantId: 'new-tenant-id',
+        email: registerDto.email,
+        name: registerDto.name,
+        passwordHash: 'hashed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      prisma.user.create.mockResolvedValue(created);
+
+      const result = await service.register(registerDto);
+
+      expect(result.accessToken).toBe('signed-token');
+      expect(result.user).not.toHaveProperty('passwordHash');
+      expect(result.user.email).toBe(registerDto.email);
+      expect(result.user.tenantId).toBe(created.tenantId);
+    });
+
+    it('throws ConflictException when email is already registered', async () => {
+      prisma.user.create.mockRejectedValue(makePrismaError('P2002'));
+
+      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
     });
   });
 });

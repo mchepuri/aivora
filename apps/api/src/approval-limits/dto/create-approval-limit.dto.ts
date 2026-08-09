@@ -3,10 +3,6 @@ import { IsDecimal, IsOptional, IsString, MaxLength } from 'class-validator';
 export class CreateApprovalLimitDto {
   @IsString()
   @MaxLength(100)
-  tenantId!: string;
-
-  @IsString()
-  @MaxLength(100)
   roleId!: string;
 
   /** e.g. "purchase_order", "payable", "expense_report" */
