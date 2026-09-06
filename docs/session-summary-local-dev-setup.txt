@@ -1,0 +1,105 @@
+SESSION SUMMARY — LOCAL DEV SETUP
+Date: 2026-06-28
+==========================================================================
+
+STEP 1 — Pull changes from remote main
+-----------------------------------------------------------------------
+Attempt : git pull origin main --no-rebase
+Result  : Successfully merged ~40 commits from main into feature/ncb_06131.
+          Brought in JWT auth, UOM module, Inventory Bot, Radix UI
+          components, Prisma migrations, and more.
+
+
+STEP 2 — Run build to check for errors
+-----------------------------------------------------------------------
+Attempt : npm run build
+
+  Error 1: rimraf: command not found
+  Cause  : New dev dependencies were added in main but npm install was
+           never run locally after the pull.
+  Fix    : Ran npm install → resolved.
+
+  Error 2: 8 TypeScript errors —
+           Module '@prisma/client' has no exported member 'UomClass'
+           Parameter 'u' implicitly has an 'any' type
+           Parameter 'c' implicitly has an 'any' type
+  Cause  : Prisma schema was updated with new models/enums in main, but
+           the Prisma client was never regenerated locally — @prisma/client
+           was stale and did not know about UomClass.
+  Fix    : Ran `npx prisma generate` inside apps/api/ → all 8 errors
+           resolved.
+
+Result  : All 3 workspaces (shared, api, web) built cleanly with zero
+          errors.
+
+
+STEP 3 — Set up apps/api/.env
+-----------------------------------------------------------------------
+Attempt : Checked existing apps/api/.env
+
+  Issues found:
+  - DATABASE_URL pointed to localhost — no local Postgres running
+  - Variable named WEB_URL but app reads WEB_ORIGIN — CORS mismatch
+  - JWT_SECRET was missing
+  - OPENROUTER_API_KEY was missing
+
+  Fixes:
+  - Copied Neon DB URL from root .env into apps/api/.env
+  - Renamed WEB_URL → WEB_ORIGIN
+  - JWT_SECRET added via: openssl rand -hex 32
+  - OPENROUTER_API_KEY added manually by user from openrouter.ai/keys
+
+
+STEP 4 — Check if DB migrations needed
+-----------------------------------------------------------------------
+Attempt : Queried Neon DB directly for existing tables via Prisma client
+Result  : All 9 tables already existed:
+            users, roles, user_roles, permissions, role_permissions,
+            approval_limits, sod_rules, units_of_measure, uom_conversions
+Decision: Skipped prisma migrate dev entirely — DB already up to date.
+
+
+STEP 5 — Start dev servers
+-----------------------------------------------------------------------
+Attempt 1: npm run dev
+  Error  : JWT_SECRET environment variable is required
+  Cause  : JWT_SECRET was missing from apps/api/.env at that point.
+  Fix    : Added JWT_SECRET to apps/api/.env.
+
+Attempt 2: npm run dev
+  Error  : The OPENAI_API_KEY environment variable is missing or empty
+  Cause  : The OpenAI SDK (used by Inventory Bot via OpenRouter) throws
+           at startup if no API key is provided, even when OPENROUTER_API_KEY
+           is passed as the apiKey option — because the SDK validates the
+           key name at construction time.
+  Fix    : User added OPENROUTER_API_KEY to apps/api/.env.
+
+Attempt 3: npm run dev
+  Error  : EADDRINUSE: address already in use :::3001
+  Cause  : A previous crashed API process was still holding port 3001.
+  Fix    : Force killed processes on ports 3000 and 3001:
+           lsof -ti :3001 | xargs kill -9
+           lsof -ti :3000 | xargs kill -9
+
+Attempt 4: npm run dev
+  Result : Both services started cleanly with no errors.
+
+
+FINAL STATE
+-----------------------------------------------------------------------
+Service         Status    URL
+--------------  --------  ------------------------------
+Web (Next.js)   Running   http://localhost:3000
+API (NestJS)    Running   http://localhost:3001/api/health
+Database        Neon      Remote — all tables present
+
+
+KEY TAKEAWAYS — Always run after pulling from main
+-----------------------------------------------------------------------
+npm install
+cd apps/api && npx prisma generate && cd ../..
+
+These two commands sync your local environment with any dependency or
+schema changes merged from main. Skipping either causes build failures.
+
+==========================================================================

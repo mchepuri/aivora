@@ -16,8 +16,10 @@ const navLinks = [
   { href: '/inventory/units-of-measure', label: 'Units of Measure' },
   { href: '/inventory/items', label: 'Items' },
   { href: '/suppliers', label: 'Suppliers' },
+  { href: '/customers', label: 'Customers' },
   { href: '/warehouses', label: 'Warehouses' },
   { href: '/purchase-orders', label: 'Purchase Orders' },
+  { href: '/sales-orders', label: 'Sales Orders' },
   { href: '/users', label: 'Users' },
 ];
 

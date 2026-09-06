@@ -139,6 +139,7 @@ model UnitOfMeasure {
   uomConversionsTo   UomConversion[]     @relation("ToUom")
   items              Item[]
   purchaseOrderLines PurchaseOrderLine[]
+  salesOrderLines    SalesOrderLine[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift.
@@ -206,6 +207,7 @@ model Item {
   baseUom UnitOfMeasure @relation(fields: [baseUomId], references: [id])
 
   purchaseOrderLines PurchaseOrderLine[]
+  salesOrderLines    SalesOrderLine[]
 
   // Partial unique index (tenantId, sku) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift,
@@ -266,6 +268,7 @@ model Warehouse {
   updatedBy     String?
 
   purchaseOrders PurchaseOrder[]
+  salesOrders    SalesOrder[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift,
@@ -344,4 +347,121 @@ model PurchaseOrderLine {
 
   @@unique([purchaseOrderId, lineNo])
   @@map("purchase_order_lines")
+}
+
+// ─── Sales ───────────────────────────────────────────────────────────────────
+
+enum CustomerStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  BLOCKED
+}
+
+/// Customer master — the sell-side counterpart of Supplier. Sales orders are
+/// received *from* these parties, where purchase orders are issued *to*
+/// suppliers.
+model Customer {
+  id              String         @id @default(cuid())
+  tenantId        String
+  code            String         @db.VarChar(32)
+  legalName       String         @db.VarChar(255)
+  defaultCurrency String         @default("USD") @db.VarChar(3)
+  /// Sell-side analogue of Supplier.ratingScore. Not enforced anywhere yet —
+  /// credit checking on order confirmation is a later milestone.
+  creditLimit     Decimal?       @db.Decimal(18, 2)
+  status          CustomerStatus @default(PENDING_APPROVAL)
+  isDeleted       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  createdBy       String?
+  updatedAt       DateTime       @updatedAt
+  updatedBy       String?
+
+  salesOrders SalesOrder[]
+
+  // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
+  // via raw SQL migration — Prisma references it by map name to prevent drift,
+  // same pattern as suppliers_code_active_key.
+  @@index([tenantId, code], map: "customers_code_active_key")
+  @@map("customers")
+}
+
+/// Fulfilment-oriented lifecycle, deliberately *not* a mirror of
+/// PurchaseOrderStatus: a sales order is confirmed rather than approved, and
+/// then moves through the warehouse (allocate -> pick -> ship) before billing.
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  ALLOCATED
+  PICKED
+  SHIPPED
+  INVOICED
+  CLOSED
+  CANCELLED
+}
+
+/// SO header. Sell-side counterpart of PurchaseOrder — `warehouseId` is the
+/// ship-from location rather than the receive-into one.
+model SalesOrder {
+  id                 String           @id @default(cuid())
+  tenantId           String
+  soNumber           String           @db.VarChar(32)
+  customerId         String
+  warehouseId        String
+  /// Customer's own reference (their PO number against us). Free text.
+  customerPoRef      String?          @db.VarChar(64)
+  currency           String           @default("USD") @db.VarChar(3)
+  fxRate             Decimal          @default(1) @db.Decimal(18, 8)
+  orderDate          DateTime         @db.Date
+  /// Date the customer asked for, as opposed to what we promised.
+  requestedDate      DateTime?        @db.Date
+  status             SalesOrderStatus @default(DRAFT)
+  subtotalAmount     Decimal          @default(0) @db.Decimal(18, 2)
+  taxAmount          Decimal          @default(0) @db.Decimal(18, 2)
+  totalAmount        Decimal          @default(0) @db.Decimal(18, 2)
+  confirmedBy        String?
+  confirmedAt        DateTime?
+  shippedAt          DateTime?
+  invoicedAt         DateTime?
+  /// Same rationale as PurchaseOrder.rejectionReason — somewhere to put the
+  /// cancel reason until an audit_logs table exists.
+  cancellationReason String?          @db.VarChar(500)
+  createdAt          DateTime         @default(now())
+  createdBy          String?
+  updatedAt          DateTime         @updatedAt
+  updatedBy          String?
+
+  customer  Customer         @relation(fields: [customerId], references: [id])
+  warehouse Warehouse        @relation(fields: [warehouseId], references: [id])
+  lines     SalesOrderLine[]
+
+  // Plain unique index, not partial-on-isDeleted like master data — sales
+  // orders have no soft-delete; "delete" means status -> CANCELLED, same
+  // discipline as purchase_orders.
+  @@unique([tenantId, soNumber])
+  @@map("sales_orders")
+}
+
+/// SO line items. `quantityShipped` is the sell-side mirror of
+/// PurchaseOrderLine.quantityReceived — a denormalized rollup that only a
+/// future Shipments/Picking milestone will write.
+model SalesOrderLine {
+  id              String  @id @default(cuid())
+  salesOrderId    String
+  lineNo          Int     @db.SmallInt
+  itemId          String
+  uomId           String
+  quantityOrdered Decimal @db.Decimal(18, 4)
+  quantityShipped Decimal @default(0) @db.Decimal(18, 4)
+  unitPrice       Decimal @db.Decimal(18, 4)
+  /// No FK yet — tax_codes table doesn't exist. Same precedent as
+  /// purchase_order_lines.taxCodeId.
+  taxCodeId       String?
+  lineTotal       Decimal @db.Decimal(18, 2)
+
+  salesOrder SalesOrder    @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  item       Item          @relation(fields: [itemId], references: [id])
+  uom        UnitOfMeasure @relation(fields: [uomId], references: [id])
+
+  @@unique([salesOrderId, lineNo])
+  @@map("sales_order_lines")
 }

@@ -8,8 +8,8 @@ import { SchemaService } from './schema.service';
 import { AgentQueryDto } from './dto/agent-query.dto';
 import { AgentResponseDto } from './dto/agent-response.dto';
 
-const PRIMARY_MODEL = 'meta-llama/llama-3.3-70b-instruct';
-const FALLBACK_MODEL = 'google/gemma-3-27b-it';
+const PRIMARY_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
+const FALLBACK_MODEL = 'openai/gpt-oss-20b:free';
 const MAX_TURNS = 8;
 const MAX_HISTORY = 20;
 const MAX_SESSIONS = 1000;
