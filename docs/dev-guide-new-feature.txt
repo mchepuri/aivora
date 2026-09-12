@@ -1,0 +1,527 @@
+AIVORA — DEVELOPER GUIDE: UNDERSTANDING THE CODEBASE & BUILDING NEW FEATURES
+Date: 2026-06-28
+==========================================================================
+
+This guide explains how all the pieces connect, and walks you through
+building a new feature end-to-end using UOM (Units of Measure) as the
+reference implementation.
+
+--------------------------------------------------------------------------
+PART 1 — HOW THE APP IS STRUCTURED
+--------------------------------------------------------------------------
+
+The monorepo has three packages:
+
+  aivora/
+  ├── apps/api/        NestJS backend — serves all data via REST API
+  ├── apps/web/        Next.js frontend — the browser UI
+  └── packages/shared/ Shared TypeScript types (no runtime code)
+
+They communicate like this:
+
+  Browser
+    │
+    │  HTTP requests (fetch with cookies)
+    ▼
+  Next.js (port 3000)
+    │  uses apiClient (apps/web/lib/apiClient.ts)
+    │  sends JWT cookie automatically
+    ▼
+  NestJS API (port 3001)
+    │  JwtAuthGuard verifies the token on every protected route
+    │  extracts tenantId + userId from the JWT
+    ▼
+  Prisma ORM
+    │  all queries scoped by tenantId
+    ▼
+  PostgreSQL (Neon)
+
+
+--------------------------------------------------------------------------
+PART 2 — HOW THE API SIDE WORKS
+--------------------------------------------------------------------------
+
+Every feature in the API follows the same 4-file pattern:
+
+  src/feature/
+  ├── feature.module.ts      Wires everything together
+  ├── feature.controller.ts  HTTP layer — routes, status codes only
+  ├── feature.service.ts     Business logic + database queries
+  └── dto/
+      ├── create-feature.dto.ts   Validates POST body
+      ├── update-feature.dto.ts   Validates PATCH body
+      └── list-feature.dto.ts     Validates query params (optional)
+
+HOW THEY CONNECT:
+
+  HTTP Request
+    → Controller (receives and validates input via DTOs)
+      → Service (runs business logic + Prisma queries)
+        → Prisma (talks to the database)
+      ← Service (returns result or throws HTTP exception)
+    ← Controller (sends response to client)
+
+  The Module registers the controller and service with NestJS,
+  and must be imported into app.module.ts to be active.
+
+AUTHENTICATION:
+  Every controller that needs auth adds @UseGuards(JwtAuthGuard).
+  The guard validates the JWT cookie, then attaches the user payload
+  (userId, tenantId, email) to req.user.
+  The controller passes req.user.tenantId to every service call
+  so queries are always scoped to the right tenant.
+
+PRISMA ERROR MAPPING (standard pattern):
+  P2002 (unique constraint violated) → ConflictException (409)
+  P2025 (record not found)           → NotFoundException (404)
+  Always catch PrismaClientKnownRequestError — never let raw DB
+  errors reach the client.
+
+
+--------------------------------------------------------------------------
+PART 3 — HOW THE FRONTEND WORKS
+--------------------------------------------------------------------------
+
+ROUTE GROUPS:
+
+  apps/web/app/
+  ├── (public)/       No auth — landing, login, register
+  │   └── layout.tsx  Shared Header + Footer
+  └── (authenticated)/  Requires login (enforced by middleware.ts)
+      └── layout.tsx    App shell with AppNav sidebar
+
+PAGES vs COMPONENTS:
+
+  Pages (app/ folder):
+  - Thin — fetch data, pass it to a component
+  - Server Components by default (no 'use client')
+  - Use async/await directly for data fetching
+
+  Components (components/ folder):
+  - Handle all the UI
+  - Add 'use client' only when you need event handlers or hooks
+  - Always use apiClient — never fetch() directly
+
+HOW A PAGE FETCHES DATA:
+
+  // app/(authenticated)/inventory/units-of-measure/page.tsx
+  async function getUoms() {
+    return apiClient.get('/master-data/uom?limit=100');
+  }
+  export default async function Page() {
+    const uoms = await getUoms();
+    return <UomTable uoms={uoms} />;   // pass to client component
+  }
+
+HOW THE API CLIENT WORKS:
+
+  apps/web/lib/apiClient.ts is the single point for all API calls.
+  It automatically:
+  - Attaches the JWT cookie (credentials: 'include')
+  - Sets Content-Type: application/json
+  - Throws an Error on non-2xx responses
+  - Handles 204 No Content (DELETE responses)
+
+  Usage:
+    apiClient.get<Type>('/path')
+    apiClient.post<Type>('/path', body)
+    apiClient.patch<Type>('/path', body)
+    apiClient.delete('/path')
+
+
+--------------------------------------------------------------------------
+PART 4 — STEP BY STEP: BUILDING A NEW FEATURE
+--------------------------------------------------------------------------
+
+We will use "Warehouse" as the example feature.
+Follow these steps in order.
+
+─────────────────────────────────────────────────────────────────────────
+STEP 1 — Add the Prisma model (database table)
+─────────────────────────────────────────────────────────────────────────
+
+Open:  apps/api/prisma/schema.prisma
+
+Add your model at the bottom (under the Master Data section):
+
+  model Warehouse {
+    id        String   @id @default(cuid())
+    tenantId  String
+    code      String   @db.VarChar(16)
+    name      String   @db.VarChar(100)
+    location  String?  @db.VarChar(200)
+    isDeleted Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([tenantId, code])
+    @@map("warehouses")
+  }
+
+Rules:
+- Always include tenantId — multi-tenant isolation is mandatory.
+- Always include isDeleted for soft deletes.
+- Always add @@map("table_name") to control the SQL table name.
+- Use @db.VarChar(n) on string fields to enforce DB-level limits.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 2 — Create and run a migration
+─────────────────────────────────────────────────────────────────────────
+
+  cd apps/api
+  npx prisma migrate dev --name add_warehouses
+  cd ../..
+
+This creates a new file in prisma/migrations/ and applies it to the DB.
+After this, run:
+
+  npx prisma generate
+
+This regenerates @prisma/client so TypeScript knows about the new model.
+
+Never edit migration files after they are committed.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 3 — Create the DTOs
+─────────────────────────────────────────────────────────────────────────
+
+Create folder:  apps/api/src/master-data/warehouse/dto/
+
+FILE: create-warehouse.dto.ts
+  import { IsOptional, IsString, MaxLength } from 'class-validator';
+
+  export class CreateWarehouseDto {
+    @IsString()
+    @MaxLength(16)
+    code!: string;
+
+    @IsString()
+    @MaxLength(100)
+    name!: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    location?: string;
+  }
+
+FILE: update-warehouse.dto.ts
+  import { IsOptional, IsString, MaxLength } from 'class-validator';
+
+  export class UpdateWarehouseDto {
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    name?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    location?: string;
+  }
+
+Rules:
+- Required fields use the definite assignment assertion: code!: string
+- Optional fields use @IsOptional() + ?: code?: string
+- Always add @MaxLength() on every string field.
+- Never put tenantId in a DTO — it comes from the JWT, not the client.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 4 — Create the Service
+─────────────────────────────────────────────────────────────────────────
+
+FILE: apps/api/src/master-data/warehouse/warehouse.service.ts
+
+  import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+  import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+  import { PrismaService } from '../../prisma/prisma.service';
+  import { CreateWarehouseDto } from './dto/create-warehouse.dto';
+  import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
+
+  @Injectable()
+  export class WarehouseService {
+    constructor(private readonly prisma: PrismaService) {}
+
+    findAll(tenantId: string) {
+      return this.prisma.warehouse.findMany({
+        where: { tenantId, isDeleted: false },
+        orderBy: { code: 'asc' },
+      });
+    }
+
+    async findOne(id: string, tenantId: string) {
+      const warehouse = await this.prisma.warehouse.findFirst({
+        where: { id, tenantId, isDeleted: false },
+      });
+      if (!warehouse) throw new NotFoundException(`Warehouse ${id} not found`);
+      return warehouse;
+    }
+
+    async create(dto: CreateWarehouseDto, tenantId: string) {
+      try {
+        return await this.prisma.warehouse.create({ data: { ...dto, tenantId } });
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+          throw new ConflictException(`Warehouse code "${dto.code}" already exists`);
+        }
+        throw e;
+      }
+    }
+
+    async update(id: string, tenantId: string, dto: UpdateWarehouseDto) {
+      await this.findOne(id, tenantId);
+      return this.prisma.warehouse.update({ where: { id }, data: dto });
+    }
+
+    async remove(id: string, tenantId: string) {
+      await this.findOne(id, tenantId);
+      await this.prisma.warehouse.update({
+        where: { id },
+        data: { isDeleted: true },
+      });
+    }
+  }
+
+Rules:
+- Always pass tenantId to every query — never query without it.
+- Always call findOne() before update/delete — fail fast with 404.
+- Never expose raw Prisma errors — map P2002 → Conflict, P2025 → NotFound.
+- Import PrismaClientKnownRequestError from @prisma/client/runtime/library.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 5 — Create the Controller
+─────────────────────────────────────────────────────────────────────────
+
+FILE: apps/api/src/master-data/warehouse/warehouse.controller.ts
+
+  import { Body, Controller, Delete, Get, HttpCode,
+           HttpStatus, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+  import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+  import { JwtPayload } from '../../auth/strategies/jwt.strategy';
+  import { CreateWarehouseDto } from './dto/create-warehouse.dto';
+  import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
+  import { WarehouseService } from './warehouse.service';
+
+  @Controller('master-data/warehouse')
+  @UseGuards(JwtAuthGuard)
+  export class WarehouseController {
+    constructor(private readonly warehouseService: WarehouseService) {}
+
+    @Get()
+    findAll(@Request() req: { user: JwtPayload }) {
+      return this.warehouseService.findAll(req.user.tenantId);
+    }
+
+    @Get(':id')
+    findOne(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+      return this.warehouseService.findOne(id, req.user.tenantId);
+    }
+
+    @Post()
+    @HttpCode(HttpStatus.CREATED)
+    create(@Body() dto: CreateWarehouseDto, @Request() req: { user: JwtPayload }) {
+      return this.warehouseService.create(dto, req.user.tenantId);
+    }
+
+    @Patch(':id')
+    update(@Param('id') id: string, @Body() dto: UpdateWarehouseDto,
+           @Request() req: { user: JwtPayload }) {
+      return this.warehouseService.update(id, req.user.tenantId, dto);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+      return this.warehouseService.remove(id, req.user.tenantId);
+    }
+  }
+
+Rules:
+- Always add @UseGuards(JwtAuthGuard) at the class level.
+- POST returns 201 — use @HttpCode(HttpStatus.CREATED).
+- DELETE returns 204 — use @HttpCode(HttpStatus.NO_CONTENT).
+- Controllers do routing only — no business logic here.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 6 — Create the Module
+─────────────────────────────────────────────────────────────────────────
+
+FILE: apps/api/src/master-data/warehouse/warehouse.module.ts
+
+  import { Module } from '@nestjs/common';
+  import { PrismaModule } from '../../prisma/prisma.module';
+  import { WarehouseController } from './warehouse.controller';
+  import { WarehouseService } from './warehouse.service';
+
+  @Module({
+    imports: [PrismaModule],
+    controllers: [WarehouseController],
+    providers: [WarehouseService],
+    exports: [WarehouseService],
+  })
+  export class WarehouseModule {}
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 7 — Register in AppModule
+─────────────────────────────────────────────────────────────────────────
+
+Open:  apps/api/src/app.module.ts
+
+Add the import:
+  import { WarehouseModule } from './master-data/warehouse/warehouse.module';
+
+Add to the imports array:
+  @Module({
+    imports: [
+      PrismaModule, HealthModule, UsersModule, AuthModule,
+      UomModule, WarehouseModule,   // <-- add here
+      ...
+    ],
+  })
+
+The API will now expose these endpoints:
+  GET    /api/master-data/warehouse
+  GET    /api/master-data/warehouse/:id
+  POST   /api/master-data/warehouse
+  PATCH  /api/master-data/warehouse/:id
+  DELETE /api/master-data/warehouse/:id
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 8 — Add the frontend page (Server Component)
+─────────────────────────────────────────────────────────────────────────
+
+Create file:
+  apps/web/app/(authenticated)/inventory/warehouses/page.tsx
+
+  import { apiClient } from '@/lib/apiClient';
+  import { WarehouseTable } from '@/components/inventory/warehouse/WarehouseTable';
+
+  async function getWarehouses() {
+    try {
+      return await apiClient.get<Warehouse[]>('/master-data/warehouse');
+    } catch {
+      return [];
+    }
+  }
+
+  export default async function WarehousesPage() {
+    const warehouses = await getWarehouses();
+    return <WarehouseTable warehouses={warehouses} />;
+  }
+
+Rules:
+- Keep pages thin — fetch data and pass it to a component.
+- Always wrap apiClient calls in try/catch and return [] on failure.
+- No 'use client' here — this is a Server Component.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 9 — Add the frontend component (Client Component)
+─────────────────────────────────────────────────────────────────────────
+
+Create file:
+  apps/web/components/inventory/warehouse/WarehouseTable.tsx
+
+  'use client';
+
+  import { useRouter } from 'next/navigation';
+  import { useState } from 'react';
+  import { Button } from '@/components/ui/Button';
+  import { apiClient } from '@/lib/apiClient';
+
+  interface Warehouse { id: string; code: string; name: string; location?: string; }
+  interface Props { warehouses: Warehouse[]; }
+
+  export function WarehouseTable({ warehouses }: Props) {
+    const router = useRouter();
+    const [deleting, setDeleting] = useState<string | null>(null);
+
+    async function handleDelete(wh: Warehouse) {
+      if (!confirm(`Delete warehouse "${wh.code}"?`)) return;
+      setDeleting(wh.id);
+      try {
+        await apiClient.delete(`/master-data/warehouse/${wh.id}`);
+        router.refresh();   // re-fetches data from the server
+      } finally {
+        setDeleting(null);
+      }
+    }
+
+    return (
+      <div>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-[28px] font-semibold tracking-tight text-ink">
+            Warehouses
+          </h1>
+          <Button onClick={() => router.push('/inventory/warehouses/new')}>
+            + New Warehouse
+          </Button>
+        </div>
+        {/* table rows here — follow UomTable.tsx as reference */}
+      </div>
+    );
+  }
+
+Rules:
+- 'use client' is required because we use useState and event handlers.
+- Always call router.refresh() after a mutation to re-fetch server data.
+- Use text-ink, text-muted, bg-canvas — never Tailwind default colours.
+- Use rounded-2xl, border border-black/5, shadow-sm for cards/tables.
+- Buttons use the Button component from components/ui/Button.tsx.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 10 — Add a nav link (optional)
+─────────────────────────────────────────────────────────────────────────
+
+Open:  apps/web/components/AppNav.tsx
+
+Add a link to the new page in the navigation list so users can reach it
+from the sidebar.
+
+
+─────────────────────────────────────────────────────────────────────────
+STEP 11 — Test it
+─────────────────────────────────────────────────────────────────────────
+
+  1. Restart the API (it auto-restarts in watch mode if already running)
+  2. Open http://localhost:3000/inventory/warehouses
+  3. Test create, list, edit, delete
+
+For API endpoints directly:
+  GET  http://localhost:3001/api/master-data/warehouse
+  (requires the aivora_token cookie — log in first via the web UI)
+
+
+--------------------------------------------------------------------------
+PART 5 — QUICK REFERENCE CHECKLIST
+--------------------------------------------------------------------------
+
+When building any new feature, tick off each item:
+
+  BACKEND
+  [ ] Added Prisma model with tenantId + isDeleted + timestamps
+  [ ] Ran prisma migrate dev --name <description>
+  [ ] Ran prisma generate
+  [ ] Created create-*.dto.ts and update-*.dto.ts with class-validator
+  [ ] Created *.service.ts with tenantId scoping on every query
+  [ ] Created *.controller.ts with @UseGuards(JwtAuthGuard)
+  [ ] Created *.module.ts importing PrismaModule
+  [ ] Registered the module in app.module.ts
+
+  FRONTEND
+  [ ] Created page.tsx as a Server Component that fetches data
+  [ ] Created Table/Form components in components/
+  [ ] Used apiClient — never fetch() directly
+  [ ] Called router.refresh() after mutations
+  [ ] Used only design system tokens (text-ink, text-muted, bg-accent etc.)
+  [ ] Added a nav link in AppNav.tsx
+
+==========================================================================
