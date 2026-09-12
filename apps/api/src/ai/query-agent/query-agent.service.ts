@@ -1,12 +1,16 @@
 import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import type {
+  ChatCompletionMessageParam,
+  ChatCompletionMessageToolCall,
+} from 'openai/resources/chat/completions';
 import { AgentToolDispatcherService, AGENT_TOOLS } from './agent-tool-dispatcher.service';
 import { ApiCapabilityService } from './api-capability.service';
 import { SchemaService } from './schema.service';
 import { AgentQueryDto } from './dto/agent-query.dto';
 import { AgentResponseDto } from './dto/agent-response.dto';
+import { parsePseudoToolCalls } from './pseudo-tool-call-parser';
 
 const PRIMARY_MODEL = 'meta-llama/llama-3.3-70b-instruct';
 const FALLBACK_MODEL = 'google/gemma-3-27b-it';
@@ -134,6 +138,11 @@ export class QueryAgentService {
   ): Promise<string> {
     let model = PRIMARY_MODEL;
     let switchedToFallback = false;
+    // Forced until the agent has actually consulted the database/API at least once —
+    // otherwise a model can (and, observed with google/gemma-3-27b-it, will) skip
+    // straight to a confident-sounding but fabricated final answer. Relaxed to 'auto'
+    // after the first real tool call so the model can still finalize its answer in text.
+    let hasCalledTool = false;
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       this.logger.debug(
@@ -147,7 +156,7 @@ export class QueryAgentService {
           model,
           messages,
           tools: AGENT_TOOLS,
-          tool_choice: 'auto',
+          tool_choice: hasCalledTool ? 'auto' : 'required',
           max_tokens: 2048,
         });
       } catch (err: unknown) {
@@ -176,19 +185,29 @@ export class QueryAgentService {
         return 'The agent received an unexpected response. Please try again.';
       }
       const { finish_reason, message } = response.choices[0];
+      const toolCalls = message.tool_calls?.length
+        ? message.tool_calls
+        : this.recoverPseudoToolCalls(message.content, model);
 
       this.logger.debug(
-        `[turn ${turn}] finish_reason=${finish_reason}, toolCalls=${message.tool_calls?.length ?? 0}, ` +
+        `[turn ${turn}] finish_reason=${finish_reason}, toolCalls=${toolCalls?.length ?? 0}, ` +
           `content=${JSON.stringify(message.content)}`,
       );
 
-      if (finish_reason === 'stop' || !message.tool_calls?.length) {
-        if (message.content) {
+      if (!toolCalls?.length) {
+        if (message.content && hasCalledTool) {
           return message.content;
         }
-        // Model stopped but produced no text — retry once with the fallback model.
+        if (message.content && !hasCalledTool) {
+          // tool_choice was 'required' — the model ignored it and answered without ever
+          // checking real data. Discard rather than risk surfacing a fabricated answer.
+          this.logger.warn(
+            `[turn ${turn}] model ${model} answered without calling a tool despite tool_choice='required' — discarding: ${message.content}`,
+          );
+        }
+        // Model stopped but produced no trustworthy text — retry once with the fallback model.
         if (!switchedToFallback) {
-          this.logger.warn('Primary model returned empty content — switching to fallback');
+          this.logger.warn('Switching to fallback after an empty or untrusted response');
           model = FALLBACK_MODEL;
           switchedToFallback = true;
           continue;
@@ -196,14 +215,17 @@ export class QueryAgentService {
         return 'I was unable to answer that question. Try rephrasing, or ask about a specific table (e.g. "Show me all users" or "List units of measure").';
       }
 
-      // Agent chose to use a tool — append its decision and dispatch
+      // Agent chose to use a tool — append its decision and dispatch. Content is
+      // dropped when the tool call was recovered from pseudo-code text (see
+      // recoverPseudoToolCalls) so the model isn't conditioned to repeat that format.
+      hasCalledTool = true;
       messages.push({
         role: 'assistant',
-        content: message.content ?? null,
-        tool_calls: message.tool_calls,
+        content: message.tool_calls?.length ? (message.content ?? null) : null,
+        tool_calls: toolCalls,
       });
 
-      for (const toolCall of message.tool_calls) {
+      for (const toolCall of toolCalls) {
         this.logger.debug(
           `[turn ${turn}] Agent calling tool: ${toolCall.function.name}, ` +
             `args=${toolCall.function.arguments}`,
@@ -226,5 +248,27 @@ export class QueryAgentService {
 
     this.logger.debug(`Agent exhausted MAX_TURNS=${MAX_TURNS} without a final answer`);
     return 'The agent could not complete the query within the allowed steps. Please try a simpler question.';
+  }
+
+  // Some OpenRouter-hosted models (observed with google/gemma-3-27b-it) don't populate
+  // tool_calls and instead write the call as text (e.g. a ```tool_code fenced block).
+  // Recover those so they still get dispatched instead of leaking to the user as the reply.
+  private recoverPseudoToolCalls(
+    content: string | null,
+    model: string,
+  ): ChatCompletionMessageToolCall[] | undefined {
+    if (!content) return undefined;
+    const pseudoCalls = parsePseudoToolCalls(content);
+    if (!pseudoCalls.length) return undefined;
+
+    this.logger.warn(
+      `Model ${model} emitted ${pseudoCalls.length} tool call(s) as text instead of the tools API — recovering: ` +
+        pseudoCalls.map((c) => c.name).join(', '),
+    );
+    return pseudoCalls.map((call) => ({
+      id: `pseudo-${randomUUID()}`,
+      type: 'function',
+      function: { name: call.name, arguments: JSON.stringify(call.args) },
+    }));
   }
 }

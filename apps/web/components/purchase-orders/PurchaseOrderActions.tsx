@@ -87,6 +87,10 @@ export function PurchaseOrderActions({ purchaseOrder }: Props) {
             </Button>
           </>
         )}
+
+        {(status === 'APPROVED' || status === 'PARTIALLY_RECEIVED') && (
+          <Button href={`/goods-receipts/new?poId=${purchaseOrder.id}`}>Receive Goods</Button>
+        )}
       </div>
 
       <Dialog isOpen={rejectOpen} onOpenChange={setRejectOpen}>

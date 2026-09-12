@@ -8,6 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Link } from '@astryxdesign/core/Link';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Selector } from '@astryxdesign/core/Selector';
+import { NumberInput } from '@astryxdesign/core/NumberInput';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@/components/ui/Button';
@@ -30,6 +31,7 @@ interface FormState {
   valuationMethod: ValuationMethod;
   isBatchTracked: boolean;
   isSerialTracked: boolean;
+  mrp: number | null;
   status: ItemStatus;
 }
 
@@ -42,6 +44,7 @@ function defaultForm(uomOptions: UomOption[]): FormState {
     valuationMethod: 'FIFO',
     isBatchTracked: false,
     isSerialTracked: false,
+    mrp: null,
     status: 'ACTIVE',
   };
 }
@@ -142,6 +145,14 @@ export function ItemCreateForm({ uomOptions }: Props) {
               options={VALUATION_METHOD_OPTIONS}
               value={form.valuationMethod}
               onChange={(value) => setForm({ ...form, valuationMethod: value as ValuationMethod })}
+            />
+            <NumberInput
+              label="MRP"
+              value={form.mrp}
+              onChange={(value) => setForm({ ...form, mrp: value })}
+              min={0}
+              step={0.01}
+              isOptional
             />
 
             <div className="flex gap-6">
