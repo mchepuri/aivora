@@ -154,11 +154,28 @@ Additive only: no existing table, column, or enum was altered.
 - `app/(authenticated)/sales-orders/page.tsx` — list
 - `app/(authenticated)/sales-orders/new/page.tsx` — parallel-fetches customers, warehouses, items, UOMs
 - `app/(authenticated)/sales-orders/[id]/page.tsx` — detail, 404s on a missing/other-tenant id
+- `app/(authenticated)/sales-orders/[id]/edit/page.tsx` — new draft-only edit route backed by the shared form
 - `components/sales-orders/SalesOrderTypes.ts` — shared types, status labels/badges, and `NEXT_ACTION`
 - `components/sales-orders/SalesOrderTable.tsx`, `SalesOrderForm.tsx`, `SalesOrderLinesEditor.tsx`, `SalesOrderDetail.tsx`, `SalesOrderActions.tsx`
 - `components/AppNav.tsx` — adds the **Sales Orders** tab after Purchase Orders
+- `components/ai-chat/AiChatContext.tsx` — adds direct sales-order shortcuts for `open sales order <so number>` and `edit sales order <so number>`; the edit variation is restricted to `DRAFT` orders
+- `components/ai-chat/AiFloatingOverlay.tsx`, `AiSidePanel.tsx`, `AiChatLauncher.tsx`, `AivaChat.tsx` — chat can be collapsed to a small launcher when it would otherwise cover page content, with a manual collapse control in the floating chat header
 
 `SalesOrderActions` renders **one** context-appropriate next-step button rather than a fixed set, driven by the `NEXT_ACTION` map in `SalesOrderTypes.ts`. That map duplicates the service's state machine in the client — deliberately, to avoid a round-trip just to learn which button to show, but it means **the two must be kept in step**; the server remains the authority and rejects anything invalid with a `409`.
+
+### Recent UI / workflow updates (2026-09-11)
+
+**Status:** [x] Added to this branch | [ ] Merged
+
+The sales-order frontend received a follow-up UX pass on top of the original CRUD/UI build:
+
+- `SalesOrderDetail.tsx` now exposes a pencil icon beside the status badge only when the order is in `DRAFT`, so non-draft orders stay read-only.
+- `SalesOrderForm.tsx` now supports edit mode with two explicit return paths: `Cancel and return` and `Save and return`, both with confirmation prompts before leaving the edit page.
+- The editor no longer shows the extra text labels on the top-right action buttons; the controls are now icon-only and aligned to the right side of the header for a cleaner edit experience.
+- `AiChatContext.tsx` now recognizes direct sales-order prompts and routes users straight to the existing view page or the new edit page. The edit prompt is intentionally blocked for non-draft orders with an assistant reply explaining the restriction.
+- The chat overlay/panel UI was refined so the user can manually collapse the floating chat window and re-open it via the blue launcher, improving full-page visibility on data-heavy screens.
+
+These updates are already reflected in the running web app and are ready to be included in the branch documentation and commit set.
 
 ### PR 5 — Chat agent registration *(not done — see Deliberate simplifications)*
 
@@ -187,12 +204,75 @@ Additive only: no existing table, column, or enum was altered.
 | PR 1 | DB schema | Built | Migration applied to the Neon dev DB |
 | PR 2 | API CRUD | Built | |
 | PR 3 | API fulfilment workflow | Built | Full DRAFT→CLOSED walk verified against a live order |
-| PR 4 | Frontend UI | Built | All three routes render 200 |
+| PR 4 | Frontend UI | Built | All three routes render 200; recent draft-edit, chat-navigation, and chat-collapsing UX additions are included in the frontend scope |
 | PR 5 | Chat agent registration | Deferred | See below |
 
 Verification at time of writing: `tsc --noEmit` clean on web, api, and the api Vercel entry; 20/20 unit tests pass; `SO-2026-00001` walked `DRAFT → CONFIRMED → ALLOCATED → PICKED → SHIPPED → INVOICED → CLOSED` with the `quantity_shipped` rollup landing correctly at the `ship` step.
 
 Built in a single pass rather than as a PR sequence, and **not yet committed** — the work sits uncommitted on `feature/ncb_06131`. A full production `next build` has **not** been run (it would clobber the running dev server's `.next`); only typechecks.
+
+---
+
+## Commit labels and rollback notes
+
+### Suggested commit labels
+
+Use one of the following labels when preparing the branch for commit:
+
+- `feat: add sales order draft edit flows and chat navigation`
+- `feat: add sales order detail edit actions and chat collapse UX`
+- `docs: update sales order implementation plan with latest frontend changes`
+
+> If the work is being split into multiple commits, keep the functional UI changes and the documentation update separate so they can be reverted independently.
+
+### Safe rollback steps
+
+If the branch needs to be rolled back for any reason, use the following sequence:
+
+1. Review the current branch state:
+
+```bash
+git status --short
+git --no-pager log --oneline -n 12
+```
+
+2. Back up any local work you want to keep before reverting anything:
+
+```bash
+git stash push -u -m "sales-order-rollback-backup"
+```
+
+3. Revert the latest commit only:
+
+```bash
+git revert --no-edit HEAD
+```
+
+4. Revert a specific earlier commit by SHA:
+
+```bash
+git revert --no-edit 1576893
+```
+
+5. If you need to undo only documentation changes while keeping code intact:
+
+```bash
+git restore --source=HEAD -- docs/sales/sales-orders/implementation-plan.md
+```
+
+6. If you need to fully discard the branch and reset to a known-good commit:
+
+```bash
+git reset --hard <good-commit-sha>
+```
+
+### Rollback checklist
+
+- [ ] Confirm which commit or file set must be reversed
+- [ ] Create a backup stash if anything uncommitted should be preserved
+- [ ] Use `git revert` for shared/committed work whenever possible
+- [ ] Use `git reset --hard` only when a full branch rollback is explicitly required
+- [ ] Re-run `tsc --noEmit` after any restore/revert to validate the branch state
 
 ---
 

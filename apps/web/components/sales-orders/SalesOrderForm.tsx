@@ -20,6 +20,7 @@ import {
   type CustomerOption,
   type DraftLine,
   type ItemOption,
+  type SalesOrder,
   type UomOption,
   type WarehouseOption,
 } from './SalesOrderTypes';
@@ -29,6 +30,7 @@ interface Props {
   warehouseOptions: WarehouseOption[];
   itemOptions: ItemOption[];
   uomOptions: UomOption[];
+  salesOrder?: SalesOrder;
 }
 
 interface HeaderState {
@@ -43,14 +45,25 @@ interface HeaderState {
 function defaultHeader(
   customerOptions: CustomerOption[],
   warehouseOptions: WarehouseOption[],
+  salesOrder?: SalesOrder,
 ): HeaderState {
   return {
-    customerId: customerOptions[0]?.id ?? '',
-    warehouseId: warehouseOptions[0]?.id ?? '',
-    customerPoRef: '',
-    currency: 'USD',
-    orderDate: new Date().toISOString().slice(0, 10),
-    requestedDate: '',
+    customerId: salesOrder?.customerId ?? customerOptions[0]?.id ?? '',
+    warehouseId: salesOrder?.warehouseId ?? warehouseOptions[0]?.id ?? '',
+    customerPoRef: salesOrder?.customerPoRef ?? '',
+    currency: salesOrder?.currency ?? 'USD',
+    orderDate: salesOrder?.orderDate.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    requestedDate: salesOrder?.requestedDate?.slice(0, 10) ?? '',
+  };
+}
+
+function lineFromSalesOrderLine(line: SalesOrder['lines'][number]): DraftLine {
+  return {
+    key: line.id,
+    itemId: line.itemId,
+    uomId: line.uomId,
+    quantityOrdered: Number(line.quantityOrdered),
+    unitPrice: Number(line.unitPrice),
   };
 }
 
@@ -61,63 +74,171 @@ export function SalesOrderForm({
   warehouseOptions,
   itemOptions,
   uomOptions,
+  salesOrder,
 }: Props) {
   const router = useRouter();
-  const [header, setHeader] = useState<HeaderState>(
-    defaultHeader(customerOptions, warehouseOptions),
+  const isEditMode = Boolean(salesOrder);
+  const [header, setHeader] = useState<HeaderState>(() =>
+    defaultHeader(customerOptions, warehouseOptions, salesOrder),
   );
-  const [lines, setLines] = useState<DraftLine[]>([emptyDraftLine()]);
+  const [lines, setLines] = useState<DraftLine[]>(() =>
+    salesOrder ? salesOrder.lines.map(lineFromSalesOrderLine) : [emptyDraftLine()],
+  );
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const missingMasterData =
     customerOptions.length === 0 || warehouseOptions.length === 0 || itemOptions.length === 0;
 
+  async function persistSalesOrder() {
+    const payload = {
+      customerId: header.customerId,
+      warehouseId: header.warehouseId,
+      customerPoRef: header.customerPoRef || undefined,
+      currency: header.currency,
+      orderDate: header.orderDate,
+      requestedDate: header.requestedDate || undefined,
+      lines: lines.map((line) => ({
+        itemId: line.itemId,
+        uomId: line.uomId,
+        quantityOrdered: line.quantityOrdered,
+        unitPrice: line.unitPrice,
+      })),
+    };
+
+    if (isEditMode && salesOrder) {
+      await apiClient.patch(`/sales/sales-orders/${salesOrder.id}`, payload);
+      return;
+    }
+
+    await apiClient.post('/sales/sales-orders', payload);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setSaving(true);
+
     try {
-      await apiClient.post('/sales/sales-orders', {
-        customerId: header.customerId,
-        warehouseId: header.warehouseId,
-        customerPoRef: header.customerPoRef || undefined,
-        currency: header.currency,
-        orderDate: header.orderDate,
-        requestedDate: header.requestedDate || undefined,
-        lines: lines.map((line) => ({
-          itemId: line.itemId,
-          uomId: line.uomId,
-          quantityOrdered: line.quantityOrdered,
-          unitPrice: line.unitPrice,
-        })),
-      });
+      await persistSalesOrder();
       router.push('/sales-orders');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create sales order');
+      setError(
+        err instanceof Error
+          ? err.message
+          : isEditMode
+            ? 'Failed to update sales order'
+            : 'Failed to create sales order',
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  async function handleSaveAndReturn() {
+    if (!isEditMode || !salesOrder) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Save changes to sales order ${salesOrder.soNumber} and return to the sales order details?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError('');
+    setSaving(true);
+
+    try {
+      await persistSalesOrder();
+      router.push(`/sales-orders/${salesOrder.id}`);
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to update sales order',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancelAndReturn() {
+    if (!isEditMode || !salesOrder) {
+      router.push('/sales-orders');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Discard unsaved changes to sales order ${salesOrder.soNumber} and return to the sales order details?`,
+    );
+
+    if (confirmed) {
+      router.push(`/sales-orders/${salesOrder.id}`);
+    }
+  }
+
   return (
     <div className="max-w-6xl">
-      <div className="mb-8">
-        <Link href="/sales-orders" className="mb-4 inline-flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-            <path
-              d="M9 11L5 7l4-4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Sales Orders
-        </Link>
-        <Heading level={1}>New Sales Order</Heading>
-        <Text color="secondary">Record an order received from a customer.</Text>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <Link href="/sales-orders" className="mb-4 inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path
+                d="M9 11L5 7l4-4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Sales Orders
+          </Link>
+          <Heading level={1}>{isEditMode ? 'Edit Sales Order' : 'New Sales Order'}</Heading>
+          <Text color="secondary">
+            {isEditMode ? 'Update the draft order details.' : 'Record an order received from a customer.'}
+          </Text>
+        </div>
+
+        {isEditMode && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancelAndReturn}
+              disabled={saving}
+              aria-label="Cancel and return"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M9 14 4 9l5-5M4 9h10a5 5 0 0 1 0 10h-2"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveAndReturn}
+              disabled={saving}
+              aria-label={saving ? 'Saving sales order' : 'Save and return'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="m5 12 4 4L19 2"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+          </div>
+        )}
       </div>
 
       {missingMasterData ? (
@@ -192,14 +313,16 @@ export function SalesOrderForm({
 
           {error && <Banner status="error" title={error} />}
 
-          <div className="flex gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save as Draft'}
-            </Button>
-            <Button type="button" variant="ghost" href="/sales-orders">
-              Cancel
-            </Button>
-          </div>
+          {!isEditMode && (
+            <div className="flex gap-3">
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving…' : 'Save as Draft'}
+              </Button>
+              <Button type="button" variant="ghost" href="/sales-orders">
+                Cancel
+              </Button>
+            </div>
+          )}
         </form>
       )}
     </div>

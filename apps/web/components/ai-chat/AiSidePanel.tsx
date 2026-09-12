@@ -3,16 +3,18 @@
 import { useEffect, useState } from 'react';
 import { ChatLayout, ChatMessageList, ChatComposer } from '@astryxdesign/core/Chat';
 import { Text } from '@astryxdesign/core/Text';
-import { IconButton } from '@astryxdesign/core/IconButton';
 import { useAiChat } from './AiChatContext';
 import { AiChatMessage, ThinkingIndicator } from './AiChatMessage';
 
-function CloseIcon() {
+function CollapseIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M2.22 2.22a.75.75 0 0 1 1.06 0L7 5.94l3.72-3.72a.75.75 0 1 1 1.06 1.06L8.06 7l3.72 3.72a.75.75 0 1 1-1.06 1.06L7 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06L5.94 7 2.22 3.28a.75.75 0 0 1 0-1.06Z"
-        fill="currentColor"
+        d="M15.5 6.5 9 12l6.5 5.5M9 12h8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -51,7 +53,15 @@ export function AiSidePanel() {
             AI Data Agent
           </Text>
         </div>
-        <IconButton label="Close chat" icon={<CloseIcon />} variant="ghost" size="sm" onClick={collapseChat} />
+        <button
+          type="button"
+          aria-label="Collapse chat"
+          title="Collapse chat"
+          onClick={collapseChat}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-accent)] text-white shadow-sm transition hover:bg-[var(--color-accent)]/90"
+        >
+          <CollapseIcon />
+        </button>
       </div>
 
       {/* ChatLayout owns scrolling, auto-scroll-to-bottom on new messages

@@ -64,6 +64,23 @@ export function SalesOrderDetail({ salesOrder: so }: Props) {
         <div className="flex items-center gap-3">
           <Heading level={1}>{so.soNumber}</Heading>
           <Badge variant={STATUS_BADGE_VARIANT[so.status]} label={STATUS_LABEL[so.status]} />
+          {so.status === 'DRAFT' && (
+            <Link
+              href={`/sales-orders/${so.id}/edit`}
+              aria-label={`Edit ${so.soNumber}`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-white text-ink transition-colors hover:bg-surface-subtle"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM14.71 6.04a1 1 0 0 1 1.42 0l2.34 2.34a1 1 0 0 1 0 1.42l-1.41 1.41-3.75-3.75 1.4-1.42Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          )}
         </div>
         {so.cancellationReason && (
           <Banner status="warning" title={`Cancelled: ${so.cancellationReason}`} className="mt-3" />

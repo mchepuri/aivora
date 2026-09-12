@@ -7,6 +7,10 @@ import { AiChatLauncher } from './AiChatLauncher';
 
 export function AivaChat() {
   const { isPanelMode, isCollapsed } = useAiChat();
-  if (isCollapsed) return <AiChatLauncher />;
+
+  if (isCollapsed) {
+    return <AiChatLauncher />;
+  }
+
   return isPanelMode ? <AiSidePanel /> : <AiFloatingOverlay />;
 }

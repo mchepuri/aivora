@@ -21,7 +21,7 @@ const composerStyles = stylex.create({
 });
 
 export function AiFloatingOverlay() {
-  const { messages, loading, sendMessage, activatePanelMode } = useAiChat();
+  const { messages, loading, sendMessage, activatePanelMode, collapseChat } = useAiChat();
   const [posY, setPosY] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -86,6 +86,23 @@ export function AiFloatingOverlay() {
       style={{ top: posY, transform: 'translateX(-50%) translateY(-100%)' }}
       className="fixed left-1/2 z-50 w-[75vw] select-none"
     >
+      <button
+        type="button"
+        aria-label="Collapse chat"
+        title="Collapse chat"
+        onClick={collapseChat}
+        className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-[light-dark(rgba(0,0,0,0.08),rgba(255,255,255,0.14))] bg-[light-dark(rgba(0,0,0,0.03),rgba(255,255,255,0.06))] text-[light-dark(rgba(0,0,0,0.56),rgba(255,255,255,0.7))] shadow-sm transition hover:bg-[light-dark(rgba(0,0,0,0.06),rgba(255,255,255,0.08))]"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M7.5 9.5 12 15l4.5-5.5M12 15v-8"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
       {/* Message history — grows upward above the search pill */}
       {hasHistory && (
         <div
