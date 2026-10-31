@@ -12,8 +12,10 @@ import { AgentQueryDto } from './dto/agent-query.dto';
 import { AgentResponseDto } from './dto/agent-response.dto';
 import { parsePseudoToolCalls } from './pseudo-tool-call-parser';
 
-const PRIMARY_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
-const FALLBACK_MODEL = 'openai/gpt-oss-20b:free';
+// Overridable via OPENROUTER_PRIMARY_MODEL / OPENROUTER_FALLBACK_MODEL, e.g. to
+// point local dev at free-tier (":free") models on a key without credits.
+const DEFAULT_PRIMARY_MODEL = 'meta-llama/llama-3.3-70b-instruct';
+const DEFAULT_FALLBACK_MODEL = 'google/gemma-3-27b-it';
 const MAX_TURNS = 8;
 const MAX_HISTORY = 20;
 const MAX_SESSIONS = 1000;
@@ -21,6 +23,9 @@ const MAX_SESSIONS = 1000;
 @Injectable()
 export class QueryAgentService {
   private readonly logger = new Logger(QueryAgentService.name);
+
+  private readonly primaryModel = process.env.OPENROUTER_PRIMARY_MODEL || DEFAULT_PRIMARY_MODEL;
+  private readonly fallbackModel = process.env.OPENROUTER_FALLBACK_MODEL || DEFAULT_FALLBACK_MODEL;
 
   private readonly openai = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY,
@@ -136,7 +141,7 @@ export class QueryAgentService {
     messages: ChatCompletionMessageParam[],
     tenantId: string,
   ): Promise<string> {
-    let model = PRIMARY_MODEL;
+    let model = this.primaryModel;
     let switchedToFallback = false;
     // Forced until the agent has actually consulted the database/API at least once —
     // otherwise a model can (and, observed with google/gemma-3-27b-it, will) skip
@@ -163,8 +168,8 @@ export class QueryAgentService {
         const error = err instanceof Error ? err : new Error(String(err));
         this.logger.debug(`[turn ${turn}] model call to ${model} threw: ${error.message}`, error.stack);
         if (!switchedToFallback) {
-          this.logger.warn(`Primary model unavailable — switching to ${FALLBACK_MODEL}`);
-          model = FALLBACK_MODEL;
+          this.logger.warn(`Primary model unavailable — switching to ${this.fallbackModel}`);
+          model = this.fallbackModel;
           switchedToFallback = true;
           continue;
         }
@@ -177,8 +182,8 @@ export class QueryAgentService {
       if (!response?.choices?.length) {
         this.logger.warn(`[turn ${turn}] model response had no choices: ${JSON.stringify(response)}`);
         if (!switchedToFallback) {
-          this.logger.warn(`Switching to ${FALLBACK_MODEL} after malformed response`);
-          model = FALLBACK_MODEL;
+          this.logger.warn(`Switching to ${this.fallbackModel} after malformed response`);
+          model = this.fallbackModel;
           switchedToFallback = true;
           continue;
         }
@@ -208,7 +213,7 @@ export class QueryAgentService {
         // Model stopped but produced no trustworthy text — retry once with the fallback model.
         if (!switchedToFallback) {
           this.logger.warn('Switching to fallback after an empty or untrusted response');
-          model = FALLBACK_MODEL;
+          model = this.fallbackModel;
           switchedToFallback = true;
           continue;
         }
