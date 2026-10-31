@@ -7,6 +7,7 @@ import { DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Selector } from '@astryxdesign/core/Selector';
+import { NumberInput } from '@astryxdesign/core/NumberInput';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +53,8 @@ export interface Item {
   valuationMethod: ValuationMethod;
   isBatchTracked: boolean;
   isSerialTracked: boolean;
+  /** Decimal fields arrive as strings — Prisma's Decimal serializes to JSON as a string. */
+  mrp: string | null;
   status: ItemStatus;
   // Astryx's Table requires row data to satisfy Record<string, unknown>.
   [key: string]: unknown;
@@ -72,6 +75,7 @@ interface FormState {
   valuationMethod: ValuationMethod;
   isBatchTracked: boolean;
   isSerialTracked: boolean;
+  mrp: number | null;
   status: ItemStatus;
 }
 
@@ -84,6 +88,7 @@ function defaultForm(uomOptions: UomOption[]): FormState {
     valuationMethod: 'FIFO',
     isBatchTracked: false,
     isSerialTracked: false,
+    mrp: null,
     status: 'ACTIVE',
   };
 }
@@ -105,6 +110,7 @@ export function ItemDialog({ open, onOpenChange, item, uomOptions }: Props) {
           valuationMethod: item.valuationMethod,
           isBatchTracked: item.isBatchTracked,
           isSerialTracked: item.isSerialTracked,
+          mrp: item.mrp !== null ? Number(item.mrp) : null,
           status: item.status,
         });
       } else {
@@ -190,6 +196,14 @@ export function ItemDialog({ open, onOpenChange, item, uomOptions }: Props) {
                 options={VALUATION_METHOD_OPTIONS}
                 value={form.valuationMethod}
                 onChange={(value) => setForm({ ...form, valuationMethod: value as ValuationMethod })}
+              />
+              <NumberInput
+                label="MRP"
+                value={form.mrp}
+                onChange={(value) => setForm({ ...form, mrp: value })}
+                min={0}
+                step={0.01}
+                isOptional
               />
               <CheckboxInput
                 label="Batch tracked"

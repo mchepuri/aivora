@@ -32,7 +32,7 @@ const poDetailInclude = {
     lines: {
       orderBy: { lineNo: 'asc' as const },
       include: {
-        item: { select: { id: true, sku: true, name: true } },
+        item: { select: { id: true, sku: true, name: true, isBatchTracked: true } },
         uom: { select: { id: true, code: true, name: true } },
       },
     },

@@ -42,6 +42,7 @@ const MOCK_ITEM = {
   shelfLifeDays: null,
   reorderPoint: null,
   reorderQuantity: null,
+  mrp: null,
   status: ItemStatus.ACTIVE,
   tenantId: TENANT,
   isDeleted: false,

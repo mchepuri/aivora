@@ -60,6 +60,13 @@ export class UpdateItemDto {
   @Min(0)
   reorderQuantity?: number;
 
+  /** Maximum Retail Price — selling price, distinct from any purchase/cost price. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  mrp?: number;
+
   @IsOptional()
   @IsEnum(ItemStatus)
   status?: ItemStatus;
