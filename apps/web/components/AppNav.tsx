@@ -15,11 +15,14 @@ import { logoutAction } from '@/app/(public)/login/actions';
 const navLinks = [
   { href: '/inventory/units-of-measure', label: 'Units of Measure' },
   { href: '/inventory/items', label: 'Items' },
+  { href: '/inventory/stock-ledger', label: 'Stock Ledger' },
   { href: '/suppliers', label: 'Suppliers' },
   { href: '/customers', label: 'Customers' },
   { href: '/warehouses', label: 'Warehouses' },
   { href: '/purchase-orders', label: 'Purchase Orders' },
+  { href: '/goods-receipts', label: 'Goods Receipts' },
   { href: '/sales-orders', label: 'Sales Orders' },
+  { href: '/reports', label: 'Reports' },
   { href: '/users', label: 'Users' },
 ];
 

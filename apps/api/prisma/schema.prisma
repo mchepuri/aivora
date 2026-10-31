@@ -135,11 +135,13 @@ model UnitOfMeasure {
   updatedAt DateTime @updatedAt
   updatedBy String?
 
-  uomConversionsFrom UomConversion[]     @relation("FromUom")
-  uomConversionsTo   UomConversion[]     @relation("ToUom")
-  items              Item[]
-  purchaseOrderLines PurchaseOrderLine[]
-  salesOrderLines    SalesOrderLine[]
+  uomConversionsFrom     UomConversion[]        @relation("FromUom")
+  uomConversionsTo       UomConversion[]        @relation("ToUom")
+  items                  Item[]
+  purchaseOrderLines     PurchaseOrderLine[]
+  salesOrderLines        SalesOrderLine[]
+  goodsReceiptNoteLines  GoodsReceiptNoteLine[]
+  inventoryLedgerEntries InventoryLedger[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift.
@@ -197,6 +199,10 @@ model Item {
   shelfLifeDays   Int?
   reorderPoint    Decimal?        @db.Decimal(18, 4)
   reorderQuantity Decimal?        @db.Decimal(18, 4)
+  /// Maximum Retail Price — selling price maintained on the item master.
+  /// Distinct from any purchase/cost price, which lives on ledger/GRN/PO
+  /// lines instead (what it cost us, not what we sell it for).
+  mrp             Decimal?        @db.Decimal(18, 4)
   status          ItemStatus      @default(ACTIVE)
   isDeleted       Boolean         @default(false)
   createdAt       DateTime        @default(now())
@@ -206,8 +212,11 @@ model Item {
 
   baseUom UnitOfMeasure @relation(fields: [baseUomId], references: [id])
 
-  purchaseOrderLines PurchaseOrderLine[]
-  salesOrderLines    SalesOrderLine[]
+  purchaseOrderLines     PurchaseOrderLine[]
+  salesOrderLines        SalesOrderLine[]
+  goodsReceiptNoteLines  GoodsReceiptNoteLine[]
+  inventoryLedgerEntries InventoryLedger[]
+  inventoryBatches       InventoryBatch[]
 
   // Partial unique index (tenantId, sku) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift,
@@ -267,8 +276,10 @@ model Warehouse {
   updatedAt     DateTime      @updatedAt
   updatedBy     String?
 
-  purchaseOrders PurchaseOrder[]
-  salesOrders    SalesOrder[]
+  purchaseOrders         PurchaseOrder[]
+  salesOrders            SalesOrder[]
+  goodsReceiptNotes      GoodsReceiptNote[]
+  inventoryLedgerEntries InventoryLedger[]
 
   // Partial unique index (tenantId, code) WHERE isDeleted = false is managed
   // via raw SQL migration — Prisma references it by map name to prevent drift,
@@ -315,9 +326,10 @@ model PurchaseOrder {
   updatedAt       DateTime            @updatedAt
   updatedBy       String?
 
-  supplier  Supplier            @relation(fields: [supplierId], references: [id])
-  warehouse Warehouse           @relation(fields: [warehouseId], references: [id])
-  lines     PurchaseOrderLine[]
+  supplier          Supplier            @relation(fields: [supplierId], references: [id])
+  warehouse         Warehouse           @relation(fields: [warehouseId], references: [id])
+  lines             PurchaseOrderLine[]
+  goodsReceiptNotes GoodsReceiptNote[]
 
   // Plain unique index, not partial-on-isDeleted like master data — POs have
   // no soft-delete; "delete" means status -> CANCELLED (see implementation plan).
@@ -333,7 +345,8 @@ model PurchaseOrderLine {
   itemId           String
   uomId            String
   quantityOrdered  Decimal @db.Decimal(18, 4)
-  /// Denormalized rollup written only by the future Goods Receipt Notes milestone.
+  /// Denormalized rollup, written by GoodsReceiptsService.post() — see
+  /// GoodsReceiptNote below, the milestone this comment used to await.
   quantityReceived Decimal @default(0) @db.Decimal(18, 4)
   unitPrice        Decimal @db.Decimal(18, 4)
   /// No FK yet — tax_codes table doesn't exist. Unused/ignored until the tax
@@ -341,12 +354,122 @@ model PurchaseOrderLine {
   taxCodeId        String?
   lineTotal        Decimal @db.Decimal(18, 2)
 
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  item          Item          @relation(fields: [itemId], references: [id])
-  uom           UnitOfMeasure @relation(fields: [uomId], references: [id])
+  purchaseOrder         PurchaseOrder          @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  item                  Item                   @relation(fields: [itemId], references: [id])
+  uom                   UnitOfMeasure          @relation(fields: [uomId], references: [id])
+  goodsReceiptNoteLines GoodsReceiptNoteLine[]
 
   @@unique([purchaseOrderId, lineNo])
   @@map("purchase_order_lines")
+}
+
+/// DRAFT: created, nothing posted yet — quantities/lines can still change, and
+/// the whole GRN can be deleted (no side effects exist to undo).
+/// POSTED: immutable — each line has posted an InventoryLedger RECEIPT entry
+/// and rolled its quantity into PurchaseOrderLine.quantityReceived /
+/// PurchaseOrder.status. Corrections from here go through REVERSED, never an
+/// edit (same append-only discipline as the ledger itself).
+/// REVERSED: every line's ledger entry has been reversed (via
+/// StockLedgerService.reverse()) and the PO rollup/status backed out.
+enum GoodsReceiptNoteStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+/// Goods Receipt Note — the actual trigger that moves inventory for a
+/// purchase order. The PO itself is just a commitment; nothing is posted to
+/// inventory_ledger until a GRN against it is posted (§5.6/§7 of the
+/// architecture doc). Scoped down like InventoryLedger: no batch_id/bin_id
+/// yet (no inventory_batches/warehouse_bins tables), so receipt-time
+/// batch/putaway linkage is deferred.
+model GoodsReceiptNote {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  grnNumber       String                 @db.VarChar(32)
+  purchaseOrderId String
+  warehouseId     String
+  receivedDate    DateTime               @db.Date
+  status          GoodsReceiptNoteStatus @default(DRAFT)
+  postedAt        DateTime?
+  postedBy        String?
+  createdAt       DateTime               @default(now())
+  createdBy       String?
+  updatedAt       DateTime               @updatedAt
+  updatedBy       String?
+
+  purchaseOrder PurchaseOrder          @relation(fields: [purchaseOrderId], references: [id])
+  warehouse     Warehouse              @relation(fields: [warehouseId], references: [id])
+  lines         GoodsReceiptNoteLine[]
+
+  // Plain unique index, not partial-on-isDeleted — GRNs have no soft-delete;
+  // a DRAFT GRN is hard-deleted (see remove()), a POSTED one is reversed.
+  @@unique([tenantId, grnNumber])
+  @@map("goods_receipt_notes")
+}
+
+/// GRN line items — one per PO line being received against. `unitCost`
+/// defaults to the PO line's unitPrice but can be overridden (the actual
+/// vendor invoice cost can differ from the PO price). `inventoryLedgerId` is
+/// null until the parent GRN is posted, then points at the RECEIPT entry this
+/// line generated — the line-level traceability the architecture doc's
+/// inventory_ledger.source_line_id would otherwise provide (see the model
+/// comment on InventoryLedger).
+model GoodsReceiptNoteLine {
+  id                String  @id @default(cuid())
+  grnId             String
+  poLineId          String
+  itemId            String
+  uomId             String
+  quantityReceived  Decimal @db.Decimal(18, 4)
+  unitCost          Decimal @db.Decimal(18, 6)
+  /// Set only when the item is batch-tracked (Item.isBatchTracked) — see
+  /// GoodsReceiptsService.create(), which finds-or-creates the InventoryBatch
+  /// by (tenantId, itemId, batchNo) rather than requiring it to exist first.
+  batchId           String?
+  inventoryLedgerId String? @unique
+
+  goodsReceiptNote     GoodsReceiptNote  @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  poLine               PurchaseOrderLine @relation(fields: [poLineId], references: [id])
+  item                 Item              @relation(fields: [itemId], references: [id])
+  uom                  UnitOfMeasure     @relation(fields: [uomId], references: [id])
+  batch                InventoryBatch?   @relation(fields: [batchId], references: [id])
+  inventoryLedgerEntry InventoryLedger?  @relation(fields: [inventoryLedgerId], references: [id])
+
+  @@map("goods_receipt_note_lines")
+}
+
+enum InventoryBatchStatus {
+  ACTIVE
+  QUARANTINE
+  EXPIRED
+  RECALLED
+}
+
+/// Batch/lot master for batch-tracked items (Item.isBatchTracked). Scoped
+/// down from §5.8 of the architecture doc: no supplier_id FK yet (supplier
+/// isn't captured at GRN receiving today) — supplierLotNo is free text
+/// instead. Batches are created implicitly at GRN receiving time
+/// (find-or-create by (tenantId, itemId, batchNo)), not through a separate
+/// batch-management screen.
+model InventoryBatch {
+  id               String               @id @default(cuid())
+  tenantId         String
+  itemId           String
+  batchNo          String               @db.VarChar(64)
+  supplierLotNo    String?              @db.VarChar(64)
+  manufacturedDate DateTime?            @db.Date
+  expiryDate       DateTime?            @db.Date
+  status           InventoryBatchStatus @default(ACTIVE)
+  createdAt        DateTime             @default(now())
+  createdBy        String?
+
+  item                   Item                   @relation(fields: [itemId], references: [id])
+  goodsReceiptNoteLines  GoodsReceiptNoteLine[]
+  inventoryLedgerEntries InventoryLedger[]
+
+  @@unique([tenantId, itemId, batchNo])
+  @@map("inventory_batches")
 }
 
 // ─── Sales ───────────────────────────────────────────────────────────────────
@@ -464,4 +587,83 @@ model SalesOrderLine {
 
   @@unique([salesOrderId, lineNo])
   @@map("sales_order_lines")
+}
+
+// ─── Inventory ───────────────────────────────────────────────────────────────
+
+/// RESERVATION / RESERVATION_RELEASE are intentionally omitted — there is no
+/// inventory_reservations table yet (see docs/Enterprise_SCM_Architecture_Design_Document.md §5.8).
+enum InventoryMovementType {
+  RECEIPT
+  ISSUE
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUSTMENT_POSITIVE
+  ADJUSTMENT_NEGATIVE
+  RETURN_IN
+  RETURN_OUT
+}
+
+/// The Stock Ledger: immutable record of every inventory movement (§7 of the
+/// architecture doc). INSERT-only — no update()/remove() anywhere in
+/// StockLedgerService, and no PATCH/DELETE route on the controller. A
+/// mis-posted entry is corrected by posting a new offsetting entry that
+/// points back via reversesEntryId (§7.4), never by editing the original row.
+///
+/// Scoped down from the full §5.8 design to match what this schema actually
+/// has today: no warehouse_bins/inventory_serials/inventory_valuation_layers
+/// tables yet, so bin/serial/valuation-layer linkage is deferred, same
+/// precedent as purchase_order_lines.taxCodeId. batchId *is* wired up (see
+/// InventoryBatch) — GRN receiving on a batch-tracked item threads it through.
+/// entryNo is Int (not the doc's BIGINT) — Postgres INTEGER tops out past 2
+/// billion entries per tenant, comfortably enough for this stage, and avoids
+/// the bigint/JSON-serialization footgun a raw bigint column would carry
+/// through Prisma into Nest's JSON responses.
+model InventoryLedger {
+  id                 String                @id @default(cuid())
+  tenantId           String
+  /// Monotonic per-tenant sequence, generated the same count-then-insert +
+  /// retry-on-conflict way as PurchaseOrder.poNumber (see generateEntryNo()).
+  entryNo            Int
+  itemId             String
+  warehouseId        String
+  /// Signed: positive for RECEIPT/TRANSFER_IN/ADJUSTMENT_POSITIVE/RETURN_IN,
+  /// negative for ISSUE/TRANSFER_OUT/ADJUSTMENT_NEGATIVE/RETURN_OUT. Callers
+  /// send an unsigned quantity — StockLedgerService derives the sign from
+  /// movementType so a caller can never accidentally post the wrong sign.
+  movementType       InventoryMovementType
+  quantity           Decimal               @db.Decimal(18, 4)
+  uomId              String
+  /// Set only for batch-tracked items — see InventoryBatch and
+  /// GoodsReceiptsService.create().
+  batchId            String?
+  /// Cost at time of movement. Nullable — no inventory_valuation_layers table
+  /// yet to source it from automatically for every movement type.
+  unitCost           Decimal?              @db.Decimal(18, 6)
+  /// e.g. 'PURCHASE_ORDER', 'ADJUSTMENT', 'REVERSAL', 'MANUAL'. Free text, not
+  /// an enum — the set of source document types will grow as GRN/Shipment/
+  /// Cycle Count modules land, and a manual/ad-hoc transaction has no
+  /// document at all.
+  sourceDocumentType String?               @db.VarChar(50)
+  sourceDocumentId   String?
+  reasonCode         String?               @db.VarChar(50)
+  /// Self-reference for correction entries (§7.4). Set only on the new entry
+  /// that reverses an existing one — never mutated onto the original.
+  reversesEntryId    String?
+  occurredAt         DateTime              @default(now())
+  createdAt          DateTime              @default(now())
+  createdBy          String?
+
+  item                 Item                  @relation(fields: [itemId], references: [id])
+  warehouse            Warehouse             @relation(fields: [warehouseId], references: [id])
+  uom                  UnitOfMeasure         @relation(fields: [uomId], references: [id])
+  batch                InventoryBatch?       @relation(fields: [batchId], references: [id])
+  reversesEntry        InventoryLedger?      @relation("InventoryLedgerReversal", fields: [reversesEntryId], references: [id])
+  reversedBy           InventoryLedger[]     @relation("InventoryLedgerReversal")
+  goodsReceiptNoteLine GoodsReceiptNoteLine?
+
+  @@unique([tenantId, entryNo])
+  @@index([tenantId, itemId, warehouseId, occurredAt])
+  @@index([tenantId, sourceDocumentType, sourceDocumentId])
+  @@map("inventory_ledger")
 }

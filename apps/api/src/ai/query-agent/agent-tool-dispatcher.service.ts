@@ -4,6 +4,13 @@ import { ApiCapabilityService } from './api-capability.service';
 import { SchemaService } from './schema.service';
 import { SqlExecutorService } from './sql-executor.service';
 
+// Postgres BIGINT columns (e.g. the result of COUNT(*)) come back from Prisma's raw
+// query methods as JS `bigint`, which JSON.stringify cannot serialize on its own.
+// Business-data row counts never approach Number.MAX_SAFE_INTEGER, so narrowing is safe.
+function stringifyWithBigInt(value: unknown): string {
+  return JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? Number(v) : v));
+}
+
 export const AGENT_TOOLS: ChatCompletionTool[] = [
   {
     type: 'function',
@@ -117,9 +124,9 @@ export class AgentToolDispatcherService {
     try {
       const result = await this.sqlExecutor.execute(query, tenantId);
       this.logger.debug(
-        `dispatch: execute_sql succeeded — rowCount=${result.rowCount}, rows=${JSON.stringify(result.rows)}`,
+        `dispatch: execute_sql succeeded — rowCount=${result.rowCount}, rows=${stringifyWithBigInt(result.rows)}`,
       );
-      return JSON.stringify({ rowCount: result.rowCount, rows: result.rows });
+      return stringifyWithBigInt({ rowCount: result.rowCount, rows: result.rows });
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       this.logger.debug(`dispatch: execute_sql failed — ${error.message}`, error.stack);
